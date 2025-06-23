@@ -1,4 +1,5 @@
 using FleetAssistant.Api.Services;
+using FleetAssistant.Agents;
 using FleetAssistant.Shared.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,13 +17,16 @@ public class FleetQueryFunction
 {
     private readonly ILogger<FleetQueryFunction> _logger;
     private readonly IAuthenticationService _authenticationService;
+    private readonly PlanningAgent _planningAgent;
 
     public FleetQueryFunction(
         ILogger<FleetQueryFunction> logger,
-        IAuthenticationService authenticationService)
+        IAuthenticationService authenticationService,
+        PlanningAgent planningAgent)
     {
         _logger = logger;
         _authenticationService = authenticationService;
+        _planningAgent = planningAgent;
     }
 
     [Function("FleetQuery")]
@@ -76,13 +80,11 @@ public class FleetQueryFunction
             if (queryRequest == null || string.IsNullOrEmpty(queryRequest.Message))
             {
                 return new BadRequestObjectResult(new { error = "Message is required" });
-            }
-
-            _logger.LogInformation("Processing query from API key {ApiKeyId} for tenant {TenantId}: {Message}",
+            }            _logger.LogInformation("Processing query from API key {ApiKeyId} for tenant {TenantId}: {Message}",
                 userContext.ApiKeyId, userContext.TenantId, queryRequest.Message);
 
-            // For now, return a simple response while we build out the agent system
-            var response = await ProcessQueryAsync(queryRequest, userContext);
+            // Delegate to the Planning Agent for processing
+            var response = await _planningAgent.ProcessQueryAsync(queryRequest, userContext);
 
             stopwatch.Stop();
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
@@ -103,45 +105,7 @@ public class FleetQueryFunction
                 traceId = Activity.Current?.Id ?? Guid.NewGuid().ToString()
             })
             {
-                StatusCode = 500
-            };
+                StatusCode = 500            };
         }
-    }
-
-    private async Task<FleetQueryResponse> ProcessQueryAsync(FleetQueryRequest request, UserContext userContext)
-    {
-        // This is a placeholder implementation while we build out the planning agent
-        // In the next steps, this will delegate to the PlanningAgent
-
-        var response = new FleetQueryResponse
-        {
-            Response = $"Hello! I received your query about: '{request.Message}'. " +
-                      $"I'm a fleet management AI assistant for tenant '{userContext.TenantId}', and I'll help you with vehicle data, maintenance, fuel efficiency, and more. " +
-                      "The planning agent and specialized agents are being implemented next.",
-            AgentData = new Dictionary<string, object>
-            {
-                ["userContext"] = new
-                {
-                    apiKeyId = userContext.ApiKeyId,
-                    apiKeyName = userContext.ApiKeyName,
-                    tenantId = userContext.TenantId,
-                    environment = userContext.Environment,
-                    scopes = userContext.Scopes
-                },
-                ["queryContext"] = new
-                {
-                    message = request.Message,
-                    hasConversationHistory = request.ConversationHistory?.Count > 0,
-                    hasAdditionalContext = request.Context?.Count > 0
-                }
-            },
-            AgentsUsed = new List<string> { "PlaceholderAgent" },
-            Timestamp = DateTime.UtcNow
-        };
-
-        // Simulate some processing time
-        await Task.Delay(100);
-
-        return response;
     }
 }

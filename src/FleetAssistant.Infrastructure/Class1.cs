@@ -1,6 +1,1 @@
-﻿namespace FleetAssistant.Infrastructure;
-
-public class Class1
-{
-
-}
+﻿// This file is removed - we'll implement the actual infrastructure classes
