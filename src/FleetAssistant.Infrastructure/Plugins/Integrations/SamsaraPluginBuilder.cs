@@ -126,9 +126,9 @@ public class SamsaraPlugin
                 source = "Samsara"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -156,7 +156,7 @@ public class SamsaraPlugin
                 timeframe = $"{startDate} to {endDate}",
                 safetyEvents = new object[]
                 {
-                    new 
+                    new
                     {
                         id = "SE-789123",
                         type = "Harsh Braking",
@@ -166,7 +166,7 @@ public class SamsaraPlugin
                         speed = "35 mph",
                         gForce = "0.4g"
                     },
-                    new 
+                    new
                     {
                         id = "SE-789120",
                         type = "Speed Limit Exceeded",
@@ -190,9 +190,9 @@ public class SamsaraPlugin
                 source = "Samsara"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -230,7 +230,7 @@ public class SamsaraPlugin
                 },
                 violations = new object[]
                 {
-                    new 
+                    new
                     {
                         type = "No violation",
                         status = "Compliant"
@@ -245,9 +245,9 @@ public class SamsaraPlugin
                 source = "Samsara"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -294,7 +294,7 @@ public class SamsaraPlugin
                 },
                 alerts = new object[]
                 {
-                    new 
+                    new
                     {
                         type = "Maintenance Due",
                         priority = "Medium",
@@ -305,9 +305,9 @@ public class SamsaraPlugin
                 source = "Samsara"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)

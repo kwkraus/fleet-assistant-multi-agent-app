@@ -113,9 +113,9 @@ public class GeoTabPlugin
                 source = "GeoTab"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -155,9 +155,9 @@ public class GeoTabPlugin
                 source = "GeoTab"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -194,9 +194,9 @@ public class GeoTabPlugin
                 source = "GeoTab"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -232,9 +232,9 @@ public class GeoTabPlugin
                 source = "GeoTab"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)

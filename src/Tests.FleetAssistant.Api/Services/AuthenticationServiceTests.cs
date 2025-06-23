@@ -53,7 +53,6 @@ public class AuthenticationServiceTests
         Assert.Equal(scopes, keyInfo.Scopes);
         Assert.True(keyInfo.IsActive);
     }
-
     [Fact]
     public async Task ValidateApiKeyAndGetUserContextAsync_WithValidApiKey_ReturnsUserContext()
     {
@@ -62,7 +61,7 @@ public class AuthenticationServiceTests
         var name = "Test API Key";
         var scopes = new List<string> { "fleet:read", "fleet:query" };
 
-        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);
+        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes, "development");
         var authHeader = $"Bearer {apiKey}";
 
         // Act

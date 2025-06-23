@@ -16,15 +16,15 @@ public interface IAuthenticationService
     /// <param name="authHeader">Authorization header value (X-API-Key or Authorization: Bearer)</param>
     /// <returns>User context if valid, null if invalid</returns>
     Task<UserContext?> ValidateApiKeyAndGetUserContextAsync(string? authHeader);
-
     /// <summary>
     /// Generates a new API key for a tenant
     /// </summary>
     /// <param name="tenantId">Tenant ID</param>
     /// <param name="name">Display name for the API key</param>
     /// <param name="scopes">Permissions for the API key</param>
+    /// <param name="environment">Environment (dev, staging, prod)</param>
     /// <returns>The generated API key (store this securely - it won't be shown again)</returns>
-    Task<(string apiKey, ApiKeyInfo keyInfo)> GenerateApiKeyAsync(string tenantId, string name, List<string> scopes);
+    Task<(string apiKey, ApiKeyInfo keyInfo)> GenerateApiKeyAsync(string tenantId, string name, List<string> scopes, string environment = "production");
 }
 
 /// <summary>
@@ -42,11 +42,12 @@ public class AuthenticationService : IAuthenticationService
         _logger = logger;
 
         // Initialize with some development API keys if empty
-        if (!_apiKeys.Any())
+        if (_apiKeys.Count == 0)
         {
             InitializeDevelopmentApiKeys();
         }
     }
+    
     public async Task<UserContext?> ValidateApiKeyAndGetUserContextAsync(string? authHeader)
     {
         try
@@ -102,7 +103,7 @@ public class AuthenticationService : IAuthenticationService
         }
     }
 
-    public async Task<(string apiKey, ApiKeyInfo keyInfo)> GenerateApiKeyAsync(string tenantId, string name, List<string> scopes)
+    public async Task<(string apiKey, ApiKeyInfo keyInfo)> GenerateApiKeyAsync(string tenantId, string name, List<string> scopes, string environment = "production")
     {
         var apiKey = GenerateSecureApiKey();
         var hashedApiKey = HashApiKey(apiKey);
@@ -114,8 +115,8 @@ public class AuthenticationService : IAuthenticationService
             HashedApiKey = hashedApiKey,
             Name = name,
             TenantId = tenantId,
-            Environment = "development", // Could be passed as parameter
-            Scopes = scopes ?? new List<string> { "fleet:read", "fleet:query" },
+            Environment = environment,
+            Scopes = scopes ?? new List<string> { Permissions.FleetQuery.Id },
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
@@ -176,20 +177,37 @@ public class AuthenticationService : IAuthenticationService
 
     private void InitializeDevelopmentApiKeys()
     {
-        // Create some development API keys for testing
+        // Create development API keys with proper role-based permissions
         var devApiKeys = new[]
         {
-            new { TenantId = "contoso-fleet", Name = "Contoso Development Key", Scopes = new[] { "fleet:read", "fleet:query", "fleet:admin" } },
-            new { TenantId = "acme-logistics", Name = "ACME Development Key", Scopes = new[] { "fleet:read", "fleet:query" } },
-            new { TenantId = "northwind-transport", Name = "Northwind Development Key", Scopes = new[] { "fleet:read", "fleet:query" } }
+            new {
+                TenantId = "test-tenant-1",
+                Name = "Test Tenant Basic Key",
+                Role = "FleetUser",
+                Environment = "development"
+            },
+            new {
+                TenantId = "premium-tenant",
+                Name = "Premium Tenant Admin Key",
+                Role = "TenantAdmin",
+                Environment = "development"
+            },
+            new {
+                TenantId = "system-admin",
+                Name = "System Admin Key",
+                Role = "TenantAdmin",
+                Environment = "development"
+            }
         };
 
         foreach (var keyData in devApiKeys)
         {
-            var (apiKey, keyInfo) = GenerateApiKeyAsync(keyData.TenantId, keyData.Name, keyData.Scopes.ToList()).Result;
+            var permissions = Roles.GetRolePermissions(keyData.Role);
+            var (apiKey, keyInfo) = GenerateApiKeyAsync(keyData.TenantId, keyData.Name, permissions, keyData.Environment).Result;
 
             // For development, log the API keys so you can use them for testing
-            _logger.LogInformation("Development API Key for {TenantId}: {ApiKey}", keyData.TenantId, apiKey);
+            _logger.LogInformation("Development API Key for {TenantId} ({Role}): {ApiKey}",
+                keyData.TenantId, keyData.Role, apiKey);
         }
     }
 }

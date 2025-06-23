@@ -39,8 +39,8 @@ public class InMemoryIntegrationConfigStore : IIntegrationConfigStore
 
     public InMemoryIntegrationConfigStore()
     {
-        _tenantIntegrations = new Dictionary<string, List<string>>();
-        _integrationConfigs = new Dictionary<(string, string), Dictionary<string, string>>();
+        _tenantIntegrations = [];
+        _integrationConfigs = [];
 
         // Initialize some test data
         InitializeTestData();
@@ -76,9 +76,9 @@ public class InMemoryIntegrationConfigStore : IIntegrationConfigStore
     private void InitializeTestData()
     {
         // Test tenant configurations
-        _tenantIntegrations["tenant1"] = new List<string> { "geotab", "fleetio" };
-        _tenantIntegrations["tenant2"] = new List<string> { "samsara", "geotab" };
-        _tenantIntegrations["test-tenant"] = new List<string> { "geotab", "fleetio", "samsara" };
+        _tenantIntegrations["tenant1"] = ["geotab", "fleetio"];
+        _tenantIntegrations["tenant2"] = ["samsara", "geotab"];
+        _tenantIntegrations["test-tenant"] = ["geotab", "fleetio", "samsara"];
 
         // Integration configurations
         _integrationConfigs[("tenant1", "geotab")] = new Dictionary<string, string>
@@ -86,9 +86,7 @@ public class InMemoryIntegrationConfigStore : IIntegrationConfigStore
             ["server"] = "my.geotab.com",
             ["database"] = "tenant1_db",
             ["apiVersion"] = "v1"
-        };
-
-        _integrationConfigs[("tenant1", "fleetio")] = new Dictionary<string, string>
+        };        _integrationConfigs[("tenant1", "fleetio")] = new Dictionary<string, string>
         {
             ["baseUrl"] = "https://secure.fleetio.com/api/v1",
             ["accountId"] = "12345"
@@ -98,6 +96,18 @@ public class InMemoryIntegrationConfigStore : IIntegrationConfigStore
         {
             ["server"] = "my.geotab.com",
             ["database"] = "test_db",
+            ["apiVersion"] = "v1"
+        };
+
+        _integrationConfigs[("test-tenant", "fleetio")] = new Dictionary<string, string>
+        {
+            ["baseUrl"] = "https://secure.fleetio.com/api/v1",
+            ["accountId"] = "54321"
+        };
+
+        _integrationConfigs[("test-tenant", "samsara")] = new Dictionary<string, string>
+        {
+            ["baseUrl"] = "https://api.samsara.com",
             ["apiVersion"] = "v1"
         };
     }

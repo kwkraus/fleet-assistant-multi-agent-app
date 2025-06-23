@@ -71,21 +71,14 @@ public class FleetioPluginBuilder : IIntegrationPluginBuilder
 /// <summary>
 /// Fleetio plugin implementation
 /// </summary>
-public class FleetioPlugin
+public class FleetioPlugin(
+    IReadOnlyDictionary<string, string> credentials,
+    IReadOnlyDictionary<string, string> config,
+    ILogger logger)
 {
-    private readonly IReadOnlyDictionary<string, string> _credentials;
-    private readonly IReadOnlyDictionary<string, string> _config;
-    private readonly ILogger _logger;
-
-    public FleetioPlugin(
-        IReadOnlyDictionary<string, string> credentials,
-        IReadOnlyDictionary<string, string> config,
-        ILogger logger)
-    {
-        _credentials = credentials;
-        _config = config;
-        _logger = logger;
-    }
+    private readonly IReadOnlyDictionary<string, string> _credentials = credentials;
+    private readonly IReadOnlyDictionary<string, string> _config = config;
+    private readonly ILogger _logger = logger;
 
     [KernelFunction, Description("Gets maintenance work orders for a vehicle from Fleetio")]
     public async Task<string> GetWorkOrdersAsync(
@@ -94,15 +87,15 @@ public class FleetioPlugin
     {
         try
         {
-            _logger.LogInformation("Getting work orders from Fleetio for vehicle {VehicleId}", vehicleId);            await Task.Delay(100); // Simulate API call
+            _logger.LogInformation("Getting work orders from Fleetio for vehicle {VehicleId}", vehicleId); await Task.Delay(100); // Simulate API call
 
             var mockData = new
             {
                 vehicleId = vehicleId,
                 workOrders = new object[]
                 {
-                    new 
-                    { 
+                    new
+                    {
                         id = "WO-12345",
                         status = "Open",
                         type = "Preventive Maintenance",
@@ -111,8 +104,8 @@ public class FleetioPlugin
                         dueDate = "2024-02-20",
                         estimatedCost = "$285.00"
                     },
-                    new 
-                    { 
+                    new
+                    {
                         id = "WO-12340",
                         status = "Closed",
                         type = "Repair",
@@ -126,9 +119,9 @@ public class FleetioPlugin
                 source = "Fleetio"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -156,7 +149,7 @@ public class FleetioPlugin
                 timeframe = $"{startDate} to {endDate}",
                 transactions = new object[]
                 {
-                    new 
+                    new
                     {
                         date = "2024-01-25",
                         gallons = 18.5,
@@ -165,7 +158,7 @@ public class FleetioPlugin
                         location = "Shell Station - Main St",
                         odometer = 74850
                     },
-                    new 
+                    new
                     {
                         date = "2024-01-18",
                         gallons = 20.2,
@@ -185,9 +178,9 @@ public class FleetioPlugin
                 source = "Fleetio"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)
@@ -231,9 +224,9 @@ public class FleetioPlugin
                 source = "Fleetio"
             };
 
-            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            return System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
         }
         catch (Exception ex)

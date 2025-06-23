@@ -43,17 +43,25 @@ public abstract class BaseAgent
             // Add Azure OpenAI chat completion service
             // Note: In production, these would come from Azure AI Foundry configuration
             // For now, we'll use environment variables or configuration
-            var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? 
-                          "https://your-foundry-endpoint.openai.azure.com/";
-            var apiKey = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY") ?? 
-                        "your-api-key-here";
-            var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? 
-                                "gpt-4o";
+            var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT");
+            var apiKey = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY");
+            var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o";
 
-            kernelBuilder.AddAzureOpenAIChatCompletion(
-                deploymentName: deploymentName,
-                endpoint: endpoint,
-                apiKey: apiKey);
+            // Only add OpenAI service if we have valid configuration
+            if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                !endpoint.Contains("your-foundry-endpoint") && !apiKey.Contains("your-api-key"))
+            {
+                kernelBuilder.AddAzureOpenAIChatCompletion(
+                    deploymentName: deploymentName,
+                    endpoint: endpoint,
+                    apiKey: apiKey);
+                
+                _logger.LogInformation("Added Azure OpenAI chat completion service for agent {AgentType}", GetType().Name);
+            }
+            else
+            {
+                _logger.LogWarning("Azure OpenAI configuration not available for agent {AgentType}. Operating in test mode.", GetType().Name);
+            }
 
             // Register integration plugins for this agent and tenant
             var kernel = kernelBuilder.Build();
@@ -70,7 +78,9 @@ public abstract class BaseAgent
                 GetType().Name, userContext.TenantId);
             throw;
         }
-    }    /// <summary>
+    }
+
+    /// <summary>
     /// Registers integration plugins specific to this agent and tenant
     /// </summary>
     /// <param name="kernel">The kernel to register plugins with</param>
@@ -162,4 +172,9 @@ public class AgentErrorResponse : AgentResponse
 {
     public string ErrorMessage { get; set; } = string.Empty;
     public object? PartialData { get; set; }
+
+    public AgentErrorResponse()
+    {
+        Success = false;
+    }
 }

@@ -40,7 +40,7 @@ public class InMemoryCredentialStore : ICredentialStore
     public InMemoryCredentialStore()
     {
         _credentials = new Dictionary<(string, string), Dictionary<string, string>>();
-        
+
         // Initialize test credentials
         InitializeTestCredentials();
     }
@@ -66,7 +66,6 @@ public class InMemoryCredentialStore : ICredentialStore
         _credentials.Remove((tenantId, integrationKey));
         return Task.CompletedTask;
     }
-
     private void InitializeTestCredentials()
     {
         // GeoTab test credentials
@@ -80,7 +79,7 @@ public class InMemoryCredentialStore : ICredentialStore
         _credentials[("test-tenant", "geotab")] = new Dictionary<string, string>
         {
             ["username"] = "test_user@test.com",
-            ["password"] = "test_password_456", 
+            ["password"] = "test_password_456",
             ["database"] = "test_db"
         };
 
@@ -91,11 +90,23 @@ public class InMemoryCredentialStore : ICredentialStore
             ["accountId"] = "12345"
         };
 
+        _credentials[("test-tenant", "fleetio")] = new Dictionary<string, string>
+        {
+            ["apiToken"] = "fleetio_test_token_test_tenant",
+            ["accountId"] = "54321"
+        };
+
         // Samsara test credentials
         _credentials[("tenant2", "samsara")] = new Dictionary<string, string>
         {
             ["apiToken"] = "samsara_test_token_tenant2",
             ["orgId"] = "org_67890"
+        };
+
+        _credentials[("test-tenant", "samsara")] = new Dictionary<string, string>
+        {
+            ["apiToken"] = "samsara_test_token_test_tenant",
+            ["orgId"] = "org_99999"
         };
     }
 }

@@ -1,7 +1,9 @@
+using FleetAssistant.Api.Middleware;
 using FleetAssistant.Api.Services;
 using FleetAssistant.Agents;
 using FleetAssistant.Infrastructure.Configuration;
 using FleetAssistant.Infrastructure.Security;
+using FleetAssistant.Infrastructure.Services;
 using FleetAssistant.Infrastructure.Plugins;
 using FleetAssistant.Infrastructure.Plugins.Integrations;
 using Microsoft.Azure.Functions.Worker;
@@ -25,6 +27,10 @@ builder.Services.AddTransient<IKernelBuilder>(_ => Kernel.CreateBuilder());
 // Register Infrastructure services
 builder.Services.AddSingleton<IIntegrationConfigStore, InMemoryIntegrationConfigStore>();
 builder.Services.AddSingleton<ICredentialStore, InMemoryCredentialStore>();
+builder.Services.AddSingleton<ITenantService, InMemoryTenantService>();
+
+// Register Authorization Middleware
+builder.Services.AddScoped<TenantAuthorizationMiddleware>();
 
 // Register Integration Plugin Builders
 builder.Services.AddScoped<IIntegrationPluginBuilder, GeoTabPluginBuilder>();

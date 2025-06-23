@@ -64,7 +64,7 @@ public class IntegrationPluginRegistry : IIntegrationPluginRegistry
 
     public IIntegrationPluginBuilder? GetBuilder(string key)
     {
-        return _pluginBuilders.FirstOrDefault(b => 
+        return _pluginBuilders.FirstOrDefault(b =>
             string.Equals(b.Key, key, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -133,7 +133,7 @@ public class IntegrationPluginRegistry : IIntegrationPluginRegistry
             foreach (var plugin in allPlugins)
             {
                 // Find the corresponding builder to check capabilities
-                var builder = _pluginBuilders.FirstOrDefault(b => 
+                var builder = _pluginBuilders.FirstOrDefault(b =>
                     string.Equals(b.Key, plugin.Name, StringComparison.OrdinalIgnoreCase));
 
                 if (builder != null)
