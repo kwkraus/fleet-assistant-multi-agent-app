@@ -1,8 +1,6 @@
 using FleetAssistant.Api.Services;
-using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 
 namespace Tests.FleetAssistant.Api.Services;
 
@@ -63,7 +61,7 @@ public class AuthenticationServiceTests
         var tenantId = "test-tenant";
         var name = "Test API Key";
         var scopes = new List<string> { "fleet:read", "fleet:query" };
-        
+
         var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);
         var authHeader = $"Bearer {apiKey}";
 
@@ -86,7 +84,7 @@ public class AuthenticationServiceTests
         var tenantId = "test-tenant";
         var name = "Test API Key";
         var scopes = new List<string> { "fleet:read" };
-        
+
         var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);
         var authHeader = $"ApiKey {apiKey}";
 
@@ -106,7 +104,7 @@ public class AuthenticationServiceTests
         var tenantId = "test-tenant";
         var name = "Test API Key";
         var scopes = new List<string> { "fleet:read" };
-        
+
         var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);
 
         // Act (direct API key without Bearer/ApiKey prefix)

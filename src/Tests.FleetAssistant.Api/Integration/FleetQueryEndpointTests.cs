@@ -1,8 +1,5 @@
 using FleetAssistant.Shared.Models;
-using Microsoft.Extensions.Logging;
-using System.Text;
 using System.Text.Json;
-using Xunit;
 
 namespace Tests.FleetAssistant.Api.Integration;
 
@@ -89,7 +86,8 @@ public class FleetQueryEndpointTests
         Assert.Single(deserializedResponse.Warnings!);
         Assert.Equal(2, deserializedResponse.AgentsUsed.Count);
         Assert.Equal(1250, deserializedResponse.ProcessingTimeMs);
-    }    [Fact]
+    }
+    [Fact]
     public void ApiKey_FollowsExpectedFormat()
     {
         // This demonstrates the expected API key format: fa_dev_xxxxxxxxxxxxxxxxxxxx

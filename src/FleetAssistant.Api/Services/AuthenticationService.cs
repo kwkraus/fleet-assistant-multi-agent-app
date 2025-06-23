@@ -33,25 +33,26 @@ public interface IAuthenticationService
 public class AuthenticationService : IAuthenticationService
 {
     private readonly ILogger<AuthenticationService> _logger;
-    
+
     // For MVP, we'll use in-memory storage. In production, this would be in a database
     private static readonly Dictionary<string, ApiKeyInfo> _apiKeys = new();
 
     public AuthenticationService(ILogger<AuthenticationService> logger)
     {
         _logger = logger;
-        
+
         // Initialize with some development API keys if empty
         if (!_apiKeys.Any())
         {
             InitializeDevelopmentApiKeys();
         }
-    }    public async Task<UserContext?> ValidateApiKeyAndGetUserContextAsync(string? authHeader)
+    }
+    public async Task<UserContext?> ValidateApiKeyAndGetUserContextAsync(string? authHeader)
     {
         try
         {
             var apiKey = ExtractApiKeyFromHeader(authHeader);
-            
+
             if (string.IsNullOrEmpty(apiKey))
             {
                 _logger.LogWarning("Missing or invalid API key in request");
@@ -60,7 +61,7 @@ public class AuthenticationService : IAuthenticationService
 
             var hashedApiKey = HashApiKey(apiKey);
             var keyInfo = _apiKeys.Values.FirstOrDefault(k => k.HashedApiKey == hashedApiKey && k.IsActive);
-            
+
             if (keyInfo == null)
             {
                 _logger.LogWarning("Invalid API key provided");
@@ -89,7 +90,7 @@ public class AuthenticationService : IAuthenticationService
                 Metadata = keyInfo.Metadata
             };
 
-            _logger.LogInformation("Successfully authenticated API key {ApiKeyId} for tenant {TenantId}", 
+            _logger.LogInformation("Successfully authenticated API key {ApiKeyId} for tenant {TenantId}",
                 keyInfo.ApiKeyId, keyInfo.TenantId);
 
             return await Task.FromResult(userContext);
@@ -136,7 +137,7 @@ public class AuthenticationService : IAuthenticationService
         {
             return authHeader.Substring("Bearer ".Length).Trim();
         }
-        
+
         if (authHeader.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase))
         {
             return authHeader.Substring("ApiKey ".Length).Trim();
@@ -152,17 +153,17 @@ public class AuthenticationService : IAuthenticationService
         const string prefix = "fa_dev_";
         const int keyLength = 24;
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        
+
         using var rng = RandomNumberGenerator.Create();
         var bytes = new byte[keyLength];
         rng.GetBytes(bytes);
-        
+
         var result = new StringBuilder();
         foreach (var b in bytes)
         {
             result.Append(chars[b % chars.Length]);
         }
-        
+
         return prefix + result.ToString();
     }
 
@@ -186,7 +187,7 @@ public class AuthenticationService : IAuthenticationService
         foreach (var keyData in devApiKeys)
         {
             var (apiKey, keyInfo) = GenerateApiKeyAsync(keyData.TenantId, keyData.Name, keyData.Scopes.ToList()).Result;
-            
+
             // For development, log the API keys so you can use them for testing
             _logger.LogInformation("Development API Key for {TenantId}: {ApiKey}", keyData.TenantId, apiKey);
         }

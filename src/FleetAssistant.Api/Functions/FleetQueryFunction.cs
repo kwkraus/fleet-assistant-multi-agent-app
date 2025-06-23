@@ -24,7 +24,7 @@ public class FleetQueryFunction
         _logger = logger;
         _authenticationService = authenticationService;
     }
-    
+
     [Function("FleetQuery")]
     public async Task<IActionResult> RunAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "fleet/query")] HttpRequest req)
