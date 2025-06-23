@@ -1,6 +1,5 @@
 using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
-using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json;
 using Xunit;
@@ -90,40 +89,65 @@ public class FleetQueryEndpointTests
         Assert.Single(deserializedResponse.Warnings!);
         Assert.Equal(2, deserializedResponse.AgentsUsed.Count);
         Assert.Equal(1250, deserializedResponse.ProcessingTimeMs);
-    }
-
-    [Fact]
-    public void CreateSampleJwtToken_ForDevelopmentTesting()
+    }    [Fact]
+    public void ApiKey_FollowsExpectedFormat()
     {
-        // This demonstrates how to create a JWT token for testing the endpoint
-        var handler = new JwtSecurityTokenHandler();
-        var claims = new[]
-        {
-            new System.Security.Claims.Claim("sub", "test-user-123"),
-            new System.Security.Claims.Claim("email", "fleet.manager@contoso.com"),
-            new System.Security.Claims.Claim("tenant_id", "contoso-fleet"),
-            new System.Security.Claims.Claim("roles", "fleet-manager"),
-            new System.Security.Claims.Claim("tenants", "contoso-fleet"),
-            new System.Security.Claims.Claim("tenants", "contoso-backup")
-        };
+        // This demonstrates the expected API key format: fa_dev_xxxxxxxxxxxxxxxxxxxx
+        var sampleApiKey = "fa_dev_1234567890abcdef12345678";
 
-        var tokenDescriptor = new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
-        {
-            Subject = new System.Security.Claims.ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddHours(1),
-            Issuer = "fleet-assistant-dev",
-            Audience = "fleet-assistant-api"
-        };
-
-        var token = handler.CreateEncodedJwt(tokenDescriptor);
-
-        // This token can be used to test the API endpoint:
+        // Test API key format validation
+        Assert.StartsWith("fa_dev_", sampleApiKey);
+        Assert.Equal(31, sampleApiKey.Length); // fa_dev_ (7) + 24 random chars        // This API key format can be used to test the endpoint:
         // curl -X POST https://localhost:7071/api/fleet/query \
-        //   -H "Authorization: Bearer {token}" \
+        //   -H "Authorization: Bearer fa_dev_1234567890abcdef12345678" \
+        //   -H "Content-Type: application/json" \
+        //   -d '{"message": "What vehicles need maintenance?"}'
+        //
+        // Or using X-API-Key header:
+        // curl -X POST https://localhost:7071/api/fleet/query \
+        //   -H "X-API-Key: fa_dev_1234567890abcdef12345678" \
         //   -H "Content-Type: application/json" \
         //   -d '{"message": "What vehicles need maintenance?"}'
 
-        Assert.NotNull(token);
-        Assert.True(token.Length > 100); // Basic sanity check
+        Assert.True(sampleApiKey.Length == 31);
+    }
+
+    [Fact]
+    public void UserContext_WithApiKey_SerializesCorrectly()
+    {
+        // Arrange
+        var userContext = new UserContext
+        {
+            ApiKeyId = "key_123",
+            ApiKeyName = "Contoso Fleet API Key",
+            TenantId = "contoso-fleet",
+            Environment = "development",
+            Scopes = new List<string> { "fleet:read", "fleet:query", "fleet:admin" },
+            CreatedAt = DateTime.UtcNow.AddDays(-30),
+            LastUsedAt = DateTime.UtcNow,
+            Metadata = new Dictionary<string, string>
+            {
+                ["created_by"] = "admin@contoso.com",
+                ["purpose"] = "API testing"
+            }
+        };
+
+        // Act
+        var json = JsonSerializer.Serialize(userContext, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var deserializedContext = JsonSerializer.Deserialize<UserContext>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        // Assert
+        Assert.NotNull(deserializedContext);
+        Assert.Equal(userContext.ApiKeyId, deserializedContext.ApiKeyId);
+        Assert.Equal(userContext.TenantId, deserializedContext.TenantId);
+        Assert.Equal(3, deserializedContext.Scopes.Count);
+        Assert.Equal(2, deserializedContext.Metadata.Count);
     }
 }

@@ -2,7 +2,6 @@ using FleetAssistant.Api.Services;
 using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.IdentityModel.Tokens.Jwt;
 using Xunit;
 
 namespace Tests.FleetAssistant.Api.Services;
@@ -19,69 +18,103 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
-    public async Task ValidateTokenAndGetUserContextAsync_WithoutAuthHeader_ReturnsNull()
+    public async Task ValidateApiKeyAndGetUserContextAsync_WithoutAuthHeader_ReturnsNull()
     {
         // Act
-        var result = await _authService.ValidateTokenAndGetUserContextAsync(null);
+        var result = await _authService.ValidateApiKeyAndGetUserContextAsync(null);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task ValidateTokenAndGetUserContextAsync_WithInvalidAuthHeader_ReturnsNull()
+    public async Task ValidateApiKeyAndGetUserContextAsync_WithInvalidApiKey_ReturnsNull()
     {
         // Act
-        var result = await _authService.ValidateTokenAndGetUserContextAsync("InvalidHeader");
+        var result = await _authService.ValidateApiKeyAndGetUserContextAsync("Bearer invalid_api_key");
 
         // Assert
         Assert.Null(result);
-    }    [Fact]
-    public async Task ValidateTokenAndGetUserContextAsync_WithValidJWT_ReturnsUserContext()
+    }
+
+    [Fact]
+    public async Task GenerateApiKeyAsync_CreatesValidApiKey()
     {
         // Arrange
-        var handler = new JwtSecurityTokenHandler();
-        var claims = new[]
-        {
-            new System.Security.Claims.Claim("sub", "test-user-123"),
-            new System.Security.Claims.Claim("email", "test@example.com"),
-            new System.Security.Claims.Claim("tenant_id", "test-tenant"),
-            new System.Security.Claims.Claim("roles", "user")
-        };
-
-        var tokenDescriptor = new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
-        {
-            Subject = new System.Security.Claims.ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddHours(1),
-            Issuer = "test-issuer",
-            Audience = "test-audience"
-        };
-
-        var token = handler.CreateEncodedJwt(tokenDescriptor);
-        var authHeader = $"Bearer {token}";
+        var tenantId = "test-tenant";
+        var name = "Test API Key";
+        var scopes = new List<string> { "fleet:read", "fleet:query" };
 
         // Act
-        var result = await _authService.ValidateTokenAndGetUserContextAsync(authHeader);
+        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);        // Assert
+        Assert.NotNull(apiKey);
+        Assert.StartsWith("fa_dev_", apiKey);
+        Assert.Equal(31, apiKey.Length); // fa_dev_ (7) + 24 random chars
+        Assert.Equal(tenantId, keyInfo.TenantId);
+        Assert.Equal(name, keyInfo.Name);
+        Assert.Equal(scopes, keyInfo.Scopes);
+        Assert.True(keyInfo.IsActive);
+    }
+
+    [Fact]
+    public async Task ValidateApiKeyAndGetUserContextAsync_WithValidApiKey_ReturnsUserContext()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var name = "Test API Key";
+        var scopes = new List<string> { "fleet:read", "fleet:query" };
+        
+        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);
+        var authHeader = $"Bearer {apiKey}";
+
+        // Act
+        var result = await _authService.ValidateApiKeyAndGetUserContextAsync(authHeader);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("test-user-123", result.UserId);
-        Assert.Equal("test@example.com", result.Email);
-        Assert.Equal("test-tenant", result.TenantId);
-        Assert.Contains("test-tenant", result.AuthorizedTenantIds);
-        Assert.Contains("user", result.Roles);
+        Assert.Equal(keyInfo.ApiKeyId, result.ApiKeyId);
+        Assert.Equal(name, result.ApiKeyName);
+        Assert.Equal(tenantId, result.TenantId);
+        Assert.Equal("development", result.Environment);
+        Assert.Equal(scopes, result.Scopes);
     }
 
     [Fact]
-    public async Task ValidateTokenAndGetUserContextAsync_WithMalformedJWT_ReturnsNull()
+    public async Task ValidateApiKeyAndGetUserContextAsync_WithApiKeyHeader_ReturnsUserContext()
     {
         // Arrange
-        var authHeader = "Bearer invalid.jwt.token";
+        var tenantId = "test-tenant";
+        var name = "Test API Key";
+        var scopes = new List<string> { "fleet:read" };
+        
+        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);
+        var authHeader = $"ApiKey {apiKey}";
 
         // Act
-        var result = await _authService.ValidateTokenAndGetUserContextAsync(authHeader);
+        var result = await _authService.ValidateApiKeyAndGetUserContextAsync(authHeader);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(keyInfo.ApiKeyId, result.ApiKeyId);
+        Assert.Equal(tenantId, result.TenantId);
+    }
+
+    [Fact]
+    public async Task ValidateApiKeyAndGetUserContextAsync_WithDirectApiKey_ReturnsUserContext()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var name = "Test API Key";
+        var scopes = new List<string> { "fleet:read" };
+        
+        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);
+
+        // Act (direct API key without Bearer/ApiKey prefix)
+        var result = await _authService.ValidateApiKeyAndGetUserContextAsync(apiKey);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(keyInfo.ApiKeyId, result.ApiKeyId);
+        Assert.Equal(tenantId, result.TenantId);
     }
 }

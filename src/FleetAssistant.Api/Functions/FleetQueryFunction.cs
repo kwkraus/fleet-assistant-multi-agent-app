@@ -24,30 +24,36 @@ public class FleetQueryFunction
         _logger = logger;
         _authenticationService = authenticationService;
     }
-
+    
     [Function("FleetQuery")]
     public async Task<IActionResult> RunAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "fleet/query")] HttpRequest req)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         try
         {
             _logger.LogInformation("Fleet query request received");
 
-            // Authenticate user
-            var authHeader = req.Headers.Authorization.FirstOrDefault();
-            var userContext = await _authenticationService.ValidateTokenAndGetUserContextAsync(authHeader);
-            
+            // Authenticate using API Key (support both Authorization header and X-API-Key header)
+            var authHeader = req.Headers.Authorization.FirstOrDefault() ??
+                           req.Headers["X-API-Key"].FirstOrDefault();
+
+            var userContext = await _authenticationService.ValidateApiKeyAndGetUserContextAsync(authHeader);
+
             if (userContext == null)
             {
                 _logger.LogWarning("Authentication failed for fleet query request");
-                return new UnauthorizedObjectResult(new { error = "Invalid or missing authentication token" });
+                return new UnauthorizedObjectResult(new
+                {
+                    error = "Invalid or missing API key",
+                    message = "Provide a valid API key in the Authorization header (Bearer <key>) or X-API-Key header"
+                });
             }
 
             // Parse request body
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
+
             if (string.IsNullOrEmpty(requestBody))
             {
                 return new BadRequestObjectResult(new { error = "Request body is required" });
@@ -72,17 +78,17 @@ public class FleetQueryFunction
                 return new BadRequestObjectResult(new { error = "Message is required" });
             }
 
-            _logger.LogInformation("Processing query from user {UserId} for tenant {TenantId}: {Message}", 
-                userContext.UserId, userContext.TenantId, queryRequest.Message);
+            _logger.LogInformation("Processing query from API key {ApiKeyId} for tenant {TenantId}: {Message}",
+                userContext.ApiKeyId, userContext.TenantId, queryRequest.Message);
 
             // For now, return a simple response while we build out the agent system
             var response = await ProcessQueryAsync(queryRequest, userContext);
-            
+
             stopwatch.Stop();
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
 
-            _logger.LogInformation("Fleet query completed in {ElapsedMs}ms for user {UserId}", 
-                stopwatch.ElapsedMilliseconds, userContext.UserId);
+            _logger.LogInformation("Fleet query completed in {ElapsedMs}ms for API key {ApiKeyId}",
+                stopwatch.ElapsedMilliseconds, userContext.ApiKeyId);
 
             return new OkObjectResult(response);
         }
@@ -90,9 +96,9 @@ public class FleetQueryFunction
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Error processing fleet query request");
-            
-            return new ObjectResult(new 
-            { 
+
+            return new ObjectResult(new
+            {
                 error = "An error occurred while processing your request",
                 traceId = Activity.Current?.Id ?? Guid.NewGuid().ToString()
             })
@@ -106,19 +112,21 @@ public class FleetQueryFunction
     {
         // This is a placeholder implementation while we build out the planning agent
         // In the next steps, this will delegate to the PlanningAgent
-        
+
         var response = new FleetQueryResponse
         {
-            Response = $"Hello {userContext.Email}! I received your query about: '{request.Message}'. " +
-                      "I'm a fleet management AI assistant, and I'll help you with vehicle data, maintenance, fuel efficiency, and more. " +
+            Response = $"Hello! I received your query about: '{request.Message}'. " +
+                      $"I'm a fleet management AI assistant for tenant '{userContext.TenantId}', and I'll help you with vehicle data, maintenance, fuel efficiency, and more. " +
                       "The planning agent and specialized agents are being implemented next.",
             AgentData = new Dictionary<string, object>
             {
-                ["userContext"] = new 
+                ["userContext"] = new
                 {
-                    userId = userContext.UserId,
+                    apiKeyId = userContext.ApiKeyId,
+                    apiKeyName = userContext.ApiKeyName,
                     tenantId = userContext.TenantId,
-                    roles = userContext.Roles
+                    environment = userContext.Environment,
+                    scopes = userContext.Scopes
                 },
                 ["queryContext"] = new
                 {

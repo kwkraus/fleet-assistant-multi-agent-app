@@ -1,107 +1,199 @@
-# Fleet Assistant Multi-Agent App - API Testing
+# Fleet Assistant API Testing Guide
 
-## Step 1.1 Complete: Main HTTP Endpoint
+This guide shows how to test the Fleet Assistant API using curl and other tools.
 
-The main fleet query endpoint is now implemented and ready for testing.
+## API Key Authentication
 
-### Endpoint Details
+The API uses API Key authentication instead of OAuth/OIDC for faster development iteration. The system supports multiple header formats:
 
-- **URL**: `POST /api/fleet/query`
-- **Authentication**: JWT Bearer token required
-- **Content-Type**: `application/json`
+- `Authorization: Bearer <api-key>`
+- `Authorization: ApiKey <api-key>`  
+- `X-API-Key: <api-key>`
 
-### Request Format
+## Development API Keys
 
-```json
-{
-  "message": "What's the fuel efficiency of vehicle ABC123?",
-  "conversationHistory": [
-    {
-      "role": "user",
-      "content": "Hello",
-      "timestamp": "2024-12-23T10:00:00Z"
-    }
-  ],
-  "context": {
-    "vehicleId": "ABC123",
-    "timeframe": "last30days"
-  }
-}
+The system generates development API keys on startup. Check your console logs when running the Azure Function to see the generated keys, or use these test keys:
+
+```
+Tenant: contoso-fleet
+Tenant: acme-logistics  
+Tenant: northwind-transport
 ```
 
-### Response Format
+## Testing the API
+
+### 1. Start the Azure Function
+
+```powershell
+cd src\FleetAssistant.Api
+func start
+```
+
+The API will be available at `http://localhost:7071`
+
+### 2. Test with curl
+
+#### Basic Query Test
+```bash
+curl -X POST http://localhost:7071/api/fleet/query \
+  -H "Authorization: Bearer fa_dev_<your-key-here>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "What vehicles need maintenance?"
+  }'
+```
+
+#### Using X-API-Key header
+```bash
+curl -X POST http://localhost:7071/api/fleet/query \
+  -H "X-API-Key: fa_dev_<your-key-here>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "What is the fuel efficiency for vehicle ABC123?"
+  }'
+```
+
+#### Query with conversation history
+```bash
+curl -X POST http://localhost:7071/api/fleet/query \
+  -H "Authorization: Bearer fa_dev_<your-key-here>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "What about maintenance costs?",
+    "conversationHistory": [
+      {
+        "role": "user", 
+        "content": "Tell me about vehicle ABC123",
+        "timestamp": "2024-06-23T10:00:00Z"
+      },
+      {
+        "role": "assistant",
+        "content": "Vehicle ABC123 is a 2022 Ford Transit...",
+        "timestamp": "2024-06-23T10:00:05Z"
+      }
+    ],
+    "context": {
+      "vehicleId": "ABC123",
+      "timeframe": "last30days"
+    }
+  }'
+```
+
+### 3. Expected Response Format
 
 ```json
 {
-  "response": "Vehicle ABC123 has an average fuel efficiency of 8.5 MPG...",
+  "response": "Hello! I received your query about: 'What vehicles need maintenance?'. I'm a fleet management AI assistant for tenant 'contoso-fleet', and I'll help you with vehicle data, maintenance, fuel efficiency, and more. The planning agent and specialized agents are being implemented next.",
   "agentData": {
     "userContext": {
-      "userId": "test-user-123",
-      "tenantId": "contoso-fleet"
+      "apiKeyId": "key_123",
+      "apiKeyName": "Contoso Development Key",
+      "tenantId": "contoso-fleet",
+      "environment": "development",
+      "scopes": ["fleet:read", "fleet:query", "fleet:admin"]
     },
     "queryContext": {
-      "message": "What's the fuel efficiency of vehicle ABC123?",
-      "hasConversationHistory": true,
-      "hasAdditionalContext": true
+      "message": "What vehicles need maintenance?",
+      "hasConversationHistory": false,
+      "hasAdditionalContext": false
     }
   },
   "agentsUsed": ["PlaceholderAgent"],
-  "warnings": null,
-  "timestamp": "2024-12-23T10:30:00Z",
-  "processingTimeMs": 1250
+  "timestamp": "2024-06-23T15:30:00.000Z",
+  "processingTimeMs": 123
 }
 ```
 
-### Testing with Curl
+### 4. Error Cases
 
-1. **Start the Azure Functions runtime locally**:
-   ```bash
-   cd src/FleetAssistant.Api
-   func start
-   ```
+#### Missing API Key
+```bash
+curl -X POST http://localhost:7071/api/fleet/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "test"}'
+```
 
-2. **Create a test JWT token** (use the token from the integration test):
-   ```bash
-   # Use the CreateSampleJwtToken_ForDevelopmentTesting test to generate a token
-   dotnet test --filter "CreateSampleJwtToken_ForDevelopmentTesting" --verbosity normal
-   ```
+Response: `401 Unauthorized`
+```json
+{
+  "error": "Invalid or missing API key",
+  "message": "Provide a valid API key in the Authorization header (Bearer <key>) or X-API-Key header"
+}
+```
 
-3. **Make a request**:
-   ```bash
-   curl -X POST http://localhost:7071/api/fleet/query \
-     -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "message": "What vehicles need maintenance?",
-       "context": {
-         "timeframe": "next30days"
-       }
-     }'
-   ```
+#### Invalid API Key
+```bash
+curl -X POST http://localhost:7071/api/fleet/query \
+  -H "Authorization: Bearer invalid_key" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "test"}'
+```
 
-### Authentication Details
+Response: `401 Unauthorized`
 
-The JWT token should include the following claims:
-- `sub` or `NameIdentifier`: User ID
-- `email`: User's email address
-- `tenant_id`: Primary tenant ID
-- `tenants`: List of authorized tenant IDs (can have multiple)
-- `roles`: User roles
+#### Missing Message
+```bash
+curl -X POST http://localhost:7071/api/fleet/query \
+  -H "Authorization: Bearer fa_dev_<your-key-here>" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
 
-### Current Implementation Status
+Response: `400 Bad Request`
+```json
+{
+  "error": "Message is required"
+}
+```
 
-✅ **POST /api/fleet/query endpoint implemented**  
-✅ **JWT authentication and user context extraction**  
-✅ **Request/response DTOs defined**  
-✅ **Error handling with proper HTTP status codes**  
-✅ **Structured logging and telemetry**  
-✅ **Unit and integration tests**  
-✅ **CORS enabled for development**  
+## PowerShell Testing Examples
 
-### Next Steps
+### Basic Test
+```powershell
+$headers = @{
+    "Authorization" = "Bearer fa_dev_<your-key-here>"
+    "Content-Type" = "application/json"
+}
 
-The next implementation step will be **Step 1.2: Implement Authentication & Authorization** where we'll:
-- Add proper JWT validation with issuer/audience verification
-- Implement tenant access validation
-- Add more comprehensive authorization logic
-- Set up production-ready OIDC/OAuth integration
+$body = @{
+    message = "What vehicles need maintenance?"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:7071/api/fleet/query" -Method Post -Headers $headers -Body $body
+```
+
+### Test with Context
+```powershell
+$headers = @{
+    "X-API-Key" = "fa_dev_<your-key-here>"
+    "Content-Type" = "application/json"
+}
+
+$body = @{
+    message = "Analyze fuel efficiency trends"
+    context = @{
+        vehicleId = "FLEET001"
+        timeframe = "last90days"
+        includeWeather = $true
+    }
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Uri "http://localhost:7071/api/fleet/query" -Method Post -Headers $headers -Body $body
+```
+
+## Next Steps
+
+1. **Planning Agent**: The current implementation is a placeholder. Next, we'll implement the PlanningAgent that uses Azure AI Foundry.
+
+2. **Specialized Agents**: After the Planning Agent, we'll add FuelAgent, MaintenanceAgent, etc.
+
+3. **Integration Plugins**: Finally, we'll implement real integrations with GeoTab, Fleetio, Samsara, etc.
+
+4. **Production Keys**: For production deployment, move from in-memory key storage to Azure Key Vault.
+
+## Troubleshooting
+
+- **CORS Issues**: The Azure Function should handle CORS automatically for development
+- **Port Conflicts**: If 7071 is busy, Azure Functions will use 7072, 7073, etc.
+- **JSON Format**: Ensure proper JSON formatting in request bodies
+- **API Key Format**: Development keys follow the pattern `fa_dev_<24-random-chars>` (31 chars total)

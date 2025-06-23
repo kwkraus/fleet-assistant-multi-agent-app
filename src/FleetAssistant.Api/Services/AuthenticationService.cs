@@ -1,140 +1,194 @@
 using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace FleetAssistant.Api.Services;
 
 /// <summary>
-/// Service for handling JWT authentication and user context extraction
+/// Service for handling API Key authentication and user context extraction
 /// </summary>
 public interface IAuthenticationService
 {
     /// <summary>
-    /// Validates a JWT token and extracts user context
+    /// Validates an API key and extracts user context
     /// </summary>
-    /// <param name="authHeader">Authorization header value</param>
+    /// <param name="authHeader">Authorization header value (X-API-Key or Authorization: Bearer)</param>
     /// <returns>User context if valid, null if invalid</returns>
-    Task<UserContext?> ValidateTokenAndGetUserContextAsync(string? authHeader);
+    Task<UserContext?> ValidateApiKeyAndGetUserContextAsync(string? authHeader);
+
+    /// <summary>
+    /// Generates a new API key for a tenant
+    /// </summary>
+    /// <param name="tenantId">Tenant ID</param>
+    /// <param name="name">Display name for the API key</param>
+    /// <param name="scopes">Permissions for the API key</param>
+    /// <returns>The generated API key (store this securely - it won't be shown again)</returns>
+    Task<(string apiKey, ApiKeyInfo keyInfo)> GenerateApiKeyAsync(string tenantId, string name, List<string> scopes);
 }
 
 /// <summary>
-/// Implementation of JWT authentication service
+/// Implementation of API Key authentication service
 /// </summary>
 public class AuthenticationService : IAuthenticationService
 {
     private readonly ILogger<AuthenticationService> _logger;
+    
+    // For MVP, we'll use in-memory storage. In production, this would be in a database
+    private static readonly Dictionary<string, ApiKeyInfo> _apiKeys = new();
 
     public AuthenticationService(ILogger<AuthenticationService> logger)
     {
         _logger = logger;
-    }
-
-    public async Task<UserContext?> ValidateTokenAndGetUserContextAsync(string? authHeader)
+        
+        // Initialize with some development API keys if empty
+        if (!_apiKeys.Any())
+        {
+            InitializeDevelopmentApiKeys();
+        }
+    }    public async Task<UserContext?> ValidateApiKeyAndGetUserContextAsync(string? authHeader)
     {
         try
         {
-            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            var apiKey = ExtractApiKeyFromHeader(authHeader);
+            
+            if (string.IsNullOrEmpty(apiKey))
             {
-                _logger.LogWarning("Missing or invalid authorization header");
+                _logger.LogWarning("Missing or invalid API key in request");
                 return null;
             }
 
-            var token = authHeader.Substring("Bearer ".Length).Trim();
+            var hashedApiKey = HashApiKey(apiKey);
+            var keyInfo = _apiKeys.Values.FirstOrDefault(k => k.HashedApiKey == hashedApiKey && k.IsActive);
             
-            if (string.IsNullOrEmpty(token))
+            if (keyInfo == null)
             {
-                _logger.LogWarning("Empty JWT token");
+                _logger.LogWarning("Invalid API key provided");
                 return null;
             }
 
-            // For development/testing, we'll implement a basic token parser
-            // In production, this would validate against a proper OIDC provider
-            var userContext = await ParseTokenAsync(token);
-            
-            if (userContext == null)
+            // Check expiration
+            if (keyInfo.ExpiresAt.HasValue && keyInfo.ExpiresAt.Value < DateTime.UtcNow)
             {
-                _logger.LogWarning("Failed to parse user context from token");
+                _logger.LogWarning("Expired API key used: {ApiKeyId}", keyInfo.ApiKeyId);
                 return null;
             }
 
-            _logger.LogInformation("Successfully authenticated user {UserId} for tenant {TenantId}", 
-                userContext.UserId, userContext.TenantId);
+            // Update last used timestamp
+            keyInfo.LastUsedAt = DateTime.UtcNow;
 
-            return userContext;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error validating JWT token");
-            return null;
-        }
-    }
-
-    private async Task<UserContext?> ParseTokenAsync(string token)
-    {
-        try
-        {
-            // For development, we'll create a simple token parser
-            // In production, this would use proper JWT validation with issuer verification
-            var jwtHandler = new JwtSecurityTokenHandler();
-            
-            if (!jwtHandler.CanReadToken(token))
-            {
-                _logger.LogWarning("Token is not a valid JWT");
-                return null;
-            }
-
-            var jwtToken = jwtHandler.ReadJwtToken(token);
-            
-            // For development/demo purposes, we'll accept any well-formed JWT
-            // In production, you would validate signature, issuer, audience, etc.
             var userContext = new UserContext
             {
-                UserId = GetClaimValue(jwtToken, ClaimTypes.NameIdentifier) ?? GetClaimValue(jwtToken, "sub") ?? "dev-user",
-                Email = GetClaimValue(jwtToken, ClaimTypes.Email) ?? GetClaimValue(jwtToken, "email") ?? "dev@example.com",
-                TenantId = GetClaimValue(jwtToken, "tenant_id") ?? "dev-tenant",
-                AuthorizedTenantIds = ParseTenantIds(jwtToken),
-                Roles = ParseRoles(jwtToken),
-                Claims = jwtToken.Claims.ToDictionary(c => c.Type, c => c.Value)
+                ApiKeyId = keyInfo.ApiKeyId,
+                ApiKeyName = keyInfo.Name,
+                TenantId = keyInfo.TenantId,
+                Environment = keyInfo.Environment,
+                Scopes = keyInfo.Scopes,
+                CreatedAt = keyInfo.CreatedAt,
+                LastUsedAt = keyInfo.LastUsedAt,
+                Metadata = keyInfo.Metadata
             };
+
+            _logger.LogInformation("Successfully authenticated API key {ApiKeyId} for tenant {TenantId}", 
+                keyInfo.ApiKeyId, keyInfo.TenantId);
 
             return await Task.FromResult(userContext);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error parsing JWT token");
+            _logger.LogError(ex, "Error validating API key");
             return null;
         }
     }
 
-    private string? GetClaimValue(JwtSecurityToken token, string claimType)
+    public async Task<(string apiKey, ApiKeyInfo keyInfo)> GenerateApiKeyAsync(string tenantId, string name, List<string> scopes)
     {
-        return token.Claims.FirstOrDefault(c => c.Type == claimType)?.Value;
+        var apiKey = GenerateSecureApiKey();
+        var hashedApiKey = HashApiKey(apiKey);
+        var apiKeyId = Guid.NewGuid().ToString();
+
+        var keyInfo = new ApiKeyInfo
+        {
+            ApiKeyId = apiKeyId,
+            HashedApiKey = hashedApiKey,
+            Name = name,
+            TenantId = tenantId,
+            Environment = "development", // Could be passed as parameter
+            Scopes = scopes ?? new List<string> { "fleet:read", "fleet:query" },
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
+        };
+
+        _apiKeys[apiKeyId] = keyInfo;
+
+        _logger.LogInformation("Generated new API key {ApiKeyId} for tenant {TenantId}", apiKeyId, tenantId);
+
+        return await Task.FromResult((apiKey, keyInfo));
     }
 
-    private List<string> ParseTenantIds(JwtSecurityToken token)
+    private string? ExtractApiKeyFromHeader(string? authHeader)
     {
-        var tenantClaims = token.Claims.Where(c => c.Type == "tenant_id" || c.Type == "tenants").ToList();
-        
-        if (tenantClaims.Any())
+        if (string.IsNullOrEmpty(authHeader))
+            return null;
+
+        // Support both "Bearer {api-key}" and "ApiKey {api-key}" formats
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
-            return tenantClaims.Select(c => c.Value).Distinct().ToList();
+            return authHeader.Substring("Bearer ".Length).Trim();
+        }
+        
+        if (authHeader.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase))
+        {
+            return authHeader.Substring("ApiKey ".Length).Trim();
         }
 
-        // Default for development
-        return new List<string> { "dev-tenant" };
+        // Also support direct API key (for X-API-Key header)
+        return authHeader.Trim();
     }
 
-    private List<string> ParseRoles(JwtSecurityToken token)
+    private string GenerateSecureApiKey()
     {
-        var roleClaims = token.Claims.Where(c => c.Type == ClaimTypes.Role || c.Type == "roles").ToList();
+        // Generate a secure random API key: fa_live_xxxxxxxxxxxxxxxxxxxx (30 chars total)
+        const string prefix = "fa_dev_";
+        const int keyLength = 24;
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         
-        if (roleClaims.Any())
+        using var rng = RandomNumberGenerator.Create();
+        var bytes = new byte[keyLength];
+        rng.GetBytes(bytes);
+        
+        var result = new StringBuilder();
+        foreach (var b in bytes)
         {
-            return roleClaims.Select(c => c.Value).Distinct().ToList();
+            result.Append(chars[b % chars.Length]);
         }
+        
+        return prefix + result.ToString();
+    }
 
-        // Default for development
-        return new List<string> { "user" };
+    private string HashApiKey(string apiKey)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(apiKey));
+        return Convert.ToBase64String(hashBytes);
+    }
+
+    private void InitializeDevelopmentApiKeys()
+    {
+        // Create some development API keys for testing
+        var devApiKeys = new[]
+        {
+            new { TenantId = "contoso-fleet", Name = "Contoso Development Key", Scopes = new[] { "fleet:read", "fleet:query", "fleet:admin" } },
+            new { TenantId = "acme-logistics", Name = "ACME Development Key", Scopes = new[] { "fleet:read", "fleet:query" } },
+            new { TenantId = "northwind-transport", Name = "Northwind Development Key", Scopes = new[] { "fleet:read", "fleet:query" } }
+        };
+
+        foreach (var keyData in devApiKeys)
+        {
+            var (apiKey, keyInfo) = GenerateApiKeyAsync(keyData.TenantId, keyData.Name, keyData.Scopes.ToList()).Result;
+            
+            // For development, log the API keys so you can use them for testing
+            _logger.LogInformation("Development API Key for {TenantId}: {ApiKey}", keyData.TenantId, apiKey);
+        }
     }
 }

@@ -1,37 +1,47 @@
 namespace FleetAssistant.Shared.Models;
 
 /// <summary>
-/// User context information extracted from JWT claims
+/// User context information extracted from API Key
 /// </summary>
 public class UserContext
 {
     /// <summary>
-    /// Unique user identifier
+    /// API Key identifier
     /// </summary>
-    public string UserId { get; set; } = string.Empty;
+    public string ApiKeyId { get; set; } = string.Empty;
 
     /// <summary>
-    /// User's email address
+    /// Name/description of the API key (for logging)
     /// </summary>
-    public string Email { get; set; } = string.Empty;
+    public string ApiKeyName { get; set; } = string.Empty;
 
     /// <summary>
-    /// List of tenant IDs the user has access to
-    /// </summary>
-    public List<string> AuthorizedTenantIds { get; set; } = new();
-
-    /// <summary>
-    /// User's roles within the application
-    /// </summary>
-    public List<string> Roles { get; set; } = new();
-
-    /// <summary>
-    /// Primary tenant ID for this request (from context or default)
+    /// Tenant ID associated with this API key
     /// </summary>
     public string TenantId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Additional claims from the JWT token
+    /// Environment (dev, staging, prod) for this API key
     /// </summary>
-    public Dictionary<string, string> Claims { get; set; } = new();
+    public string Environment { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Permissions/scopes for this API key
+    /// </summary>
+    public List<string> Scopes { get; set; } = new();
+
+    /// <summary>
+    /// When this API key was created
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// When this API key last accessed the API
+    /// </summary>
+    public DateTime LastUsedAt { get; set; }
+
+    /// <summary>
+    /// Additional metadata for the API key
+    /// </summary>
+    public Dictionary<string, string> Metadata { get; set; } = new();
 }

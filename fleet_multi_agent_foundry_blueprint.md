@@ -1,7 +1,7 @@
 
 # Fleet Multi-Agent Virtual Assistant — Step-by-Step Blueprint (Azure AI Foundry Edition)
 
-This blueprint builds a multi-tenant fleet management AI assistant using **Azure AI Foundry** for LLM orchestration and **Semantic Kernel** for agent coordination. The system uses a single orchestrator that routes to specialized agents with tenant-specific integrations.
+This blueprint builds a multi-tenant fleet management AI assistant using **Azure AI Foundry** for LLM orchestration and **Semantic Kernel** for agent coordination. The system uses a single orchestrator that routes to specialized agents with tenant-specific integratio- **Supports enterprise authentication** with API Key and tenant isolations.
 
 ## Architecture Overview
 
@@ -9,7 +9,7 @@ This blueprint builds a multi-tenant fleet management AI assistant using **Azure
 - **Planning Agent** coordinates all requests and calls sub-agents
 - **Tenant-specific Integration Plugins** (GeoTab, Fleetio, Samsara, etc.)
 - **Azure AI Foundry** for model routing and selection
-- **OIDC/OAuth** authentication with role-based authorization
+- **API Key** authentication with tenant isolation
 - **Graceful degradation** when integrations fail
 
 ---
@@ -35,16 +35,17 @@ This blueprint builds a multi-tenant fleet management AI assistant using **Azure
 ```text
 - In `FleetAssistant.Api`, add POST `/api/fleet/query`.
 - Accepts: `{ message: string, conversationHistory?: object[], context?: object }`.
-- JWT-based authentication with tenant validation.
+- API Key authentication with tenant validation.
 - Returns: `{ response: string, agentData: object, warnings?: string[] }`.
 ```
 
 ### 1.2. Implement Authentication & Authorization
 ```text
-- Add JWT middleware for OIDC/OAuth token validation.
-- Extract user roles and authorized tenantIds from JWT claims.
-- Create authorization service for tenant access validation.
-- Test: Valid JWT allows access, invalid/expired JWT returns 401.
+- Add API Key authentication middleware for tenant validation.
+- Extract tenant ID and permissions from API Key claims.
+- Support multiple header formats: Authorization: Bearer <key>, X-API-Key: <key>.
+- In-memory API key storage for MVP (evolve to database/Key Vault for production).
+- Test: Valid API key allows access, invalid/expired key returns 401.
 ```
 
 ### 1.3. Implement Planning Agent with Azure AI Foundry
