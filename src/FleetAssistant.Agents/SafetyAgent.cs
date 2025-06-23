@@ -13,9 +13,9 @@ namespace FleetAssistant.Agents;
 public class SafetyAgent : BaseAgent
 {
     public SafetyAgent(
-        ILogger<SafetyAgent> logger, 
-        IKernelBuilder kernelBuilder, 
-        IIntegrationPluginRegistry pluginRegistry) 
+        ILogger<SafetyAgent> logger,
+        IKernelBuilder kernelBuilder,
+        IIntegrationPluginRegistry pluginRegistry)
         : base(logger, kernelBuilder, pluginRegistry)
     {
     }
@@ -27,7 +27,7 @@ public class SafetyAgent : BaseAgent
     {
         try
         {
-            _logger.LogInformation("Safety agent processing query for tenant {TenantId}: {Message}", 
+            _logger.LogInformation("Safety agent processing query for tenant {TenantId}: {Message}",
                 userContext.TenantId, request.Message);
 
             var kernel = await CreateKernelAsync(userContext);

@@ -68,7 +68,7 @@ public class InMemoryIntegrationConfigStore : IIntegrationConfigStore
 
     public Task<bool> IsIntegrationEnabledAsync(string tenantId, string integrationKey)
     {
-        var enabled = _tenantIntegrations.TryGetValue(tenantId, out var integrations) && 
+        var enabled = _tenantIntegrations.TryGetValue(tenantId, out var integrations) &&
                      integrations.Contains(integrationKey, StringComparer.OrdinalIgnoreCase);
         return Task.FromResult(enabled);
     }
@@ -86,7 +86,9 @@ public class InMemoryIntegrationConfigStore : IIntegrationConfigStore
             ["server"] = "my.geotab.com",
             ["database"] = "tenant1_db",
             ["apiVersion"] = "v1"
-        };        _integrationConfigs[("tenant1", "fleetio")] = new Dictionary<string, string>
+        };
+
+        _integrationConfigs[("tenant1", "fleetio")] = new Dictionary<string, string>
         {
             ["baseUrl"] = "https://secure.fleetio.com/api/v1",
             ["accountId"] = "12345"

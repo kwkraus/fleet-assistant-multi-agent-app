@@ -17,8 +17,8 @@ public class PlanningAgent : BaseAgent
     private readonly SafetyAgent? _safetyAgent;
 
     public PlanningAgent(
-        ILogger<PlanningAgent> logger, 
-        IKernelBuilder kernelBuilder) 
+        ILogger<PlanningAgent> logger,
+        IKernelBuilder kernelBuilder)
         : base(logger, kernelBuilder)
     {
         _fuelAgent = null;
@@ -27,12 +27,12 @@ public class PlanningAgent : BaseAgent
     }
 
     public PlanningAgent(
-        ILogger<PlanningAgent> logger, 
-        IKernelBuilder kernelBuilder, 
+        ILogger<PlanningAgent> logger,
+        IKernelBuilder kernelBuilder,
         IIntegrationPluginRegistry pluginRegistry,
         FuelAgent? fuelAgent = null,
         MaintenanceAgent? maintenanceAgent = null,
-        SafetyAgent? safetyAgent = null) 
+        SafetyAgent? safetyAgent = null)
         : base(logger, kernelBuilder, pluginRegistry)
     {
         _fuelAgent = fuelAgent;
@@ -50,7 +50,7 @@ public class PlanningAgent : BaseAgent
     {
         try
         {
-            _logger.LogInformation("Planning agent processing query for tenant {TenantId}: {Message}", 
+            _logger.LogInformation("Planning agent processing query for tenant {TenantId}: {Message}",
                 userContext.TenantId, request.Message);            // Create kernel for this planning session
             var kernel = await CreateKernelAsync(userContext);
 
@@ -83,7 +83,8 @@ public class PlanningAgent : BaseAgent
             var errorResponse = HandleError(ex, "query processing");
             return new FleetQueryResponse
             {
-                Response = errorResponse.ErrorMessage,                AgentData = new Dictionary<string, object>
+                Response = errorResponse.ErrorMessage,
+                AgentData = new Dictionary<string, object>
                 {
                     ["error"] = errorResponse.ErrorMessage,
                     ["partialData"] = errorResponse.PartialData ?? "none"
@@ -94,8 +95,8 @@ public class PlanningAgent : BaseAgent
             };
         }
     }    /// <summary>
-    /// Analyzes user intent and determines which specialized agents should be called
-    /// </summary>
+         /// Analyzes user intent and determines which specialized agents should be called
+         /// </summary>
     private async Task<(AgentResponse planningResult, List<string> intendedAgents)> AnalyzeIntentAsync(Kernel kernel, FleetQueryRequest request, UserContext userContext)
     {
         try
@@ -104,7 +105,7 @@ public class PlanningAgent : BaseAgent
 
             // Create a conversation history
             var chatHistory = new ChatHistory();
-            
+
             // Add system prompt for planning
             chatHistory.AddSystemMessage(GetPlanningSystemPrompt(userContext));
 
@@ -141,7 +142,7 @@ public class PlanningAgent : BaseAgent
             var planningResponse = result.Content ?? "I understand you're asking about fleet management. Let me help you with that.";
 
             // Analyze what agents we would call (placeholder for now)
-            var intendedAgents = AnalyzeRequiredAgents(request.Message);            return (new AgentResponse
+            var intendedAgents = AnalyzeRequiredAgents(request.Message); return (new AgentResponse
             {
                 Success = true,
                 Response = planningResponse,
@@ -257,15 +258,15 @@ Be conversational but professional. Focus on practical fleet management insights
     /// Coordinates calls to specialized agents based on intent analysis
     /// </summary>
     private async Task<Dictionary<string, AgentResponse>> CoordinateSpecializedAgentsAsync(
-        FleetQueryRequest request, 
-        UserContext userContext, 
+        FleetQueryRequest request,
+        UserContext userContext,
         List<string> intendedAgents)
     {
         var agentResponses = new Dictionary<string, AgentResponse>();
 
         try
         {
-            _logger.LogInformation("Coordinating {Count} specialized agents: {Agents}", 
+            _logger.LogInformation("Coordinating {Count} specialized agents: {Agents}",
                 intendedAgents.Count, string.Join(", ", intendedAgents));
 
             // Call agents in parallel for better performance
@@ -326,7 +327,7 @@ Be conversational but professional. Focus on practical fleet management insights
     /// Helper method to call an agent with error handling
     /// </summary>
     private async Task<(string agentName, AgentResponse response)> CallAgentAsync(
-        string agentName, 
+        string agentName,
         Func<Task<AgentResponse>> agentCall)
     {
         try
@@ -345,8 +346,8 @@ Be conversational but professional. Focus on practical fleet management insights
             });
         }
     }    /// <summary>
-    /// Combines responses from multiple agents into a cohesive response
-    /// </summary>
+         /// Combines responses from multiple agents into a cohesive response
+         /// </summary>
     private async Task<(string Response, Dictionary<string, object> Data, List<string> AgentsUsed, List<string> Warnings)> CombineAgentResponsesAsync(
         Kernel kernel,
         AgentResponse planningResult,
@@ -388,7 +389,7 @@ Be conversational but professional. Focus on practical fleet management insights
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error combining agent responses");
-            
+
             return (planningResult.Response, planningResult.Data, new List<string> { "PlanningAgent" }, new List<string> { "Error combining multi-agent responses" });
         }
     }

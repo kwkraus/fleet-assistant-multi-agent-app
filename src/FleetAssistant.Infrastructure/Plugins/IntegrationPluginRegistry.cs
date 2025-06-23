@@ -1,5 +1,4 @@
 using FleetAssistant.Infrastructure.Configuration;
-using FleetAssistant.Infrastructure.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 

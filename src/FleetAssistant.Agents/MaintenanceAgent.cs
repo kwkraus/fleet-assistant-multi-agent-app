@@ -13,9 +13,9 @@ namespace FleetAssistant.Agents;
 public class MaintenanceAgent : BaseAgent
 {
     public MaintenanceAgent(
-        ILogger<MaintenanceAgent> logger, 
-        IKernelBuilder kernelBuilder, 
-        IIntegrationPluginRegistry pluginRegistry) 
+        ILogger<MaintenanceAgent> logger,
+        IKernelBuilder kernelBuilder,
+        IIntegrationPluginRegistry pluginRegistry)
         : base(logger, kernelBuilder, pluginRegistry)
     {
     }
@@ -27,7 +27,7 @@ public class MaintenanceAgent : BaseAgent
     {
         try
         {
-            _logger.LogInformation("Maintenance agent processing query for tenant {TenantId}: {Message}", 
+            _logger.LogInformation("Maintenance agent processing query for tenant {TenantId}: {Message}",
                 userContext.TenantId, request.Message);
 
             var kernel = await CreateKernelAsync(userContext);

@@ -1,11 +1,11 @@
+using FleetAssistant.Agents;
 using FleetAssistant.Api.Middleware;
 using FleetAssistant.Api.Services;
-using FleetAssistant.Agents;
 using FleetAssistant.Infrastructure.Configuration;
-using FleetAssistant.Infrastructure.Security;
-using FleetAssistant.Infrastructure.Services;
 using FleetAssistant.Infrastructure.Plugins;
 using FleetAssistant.Infrastructure.Plugins.Integrations;
+using FleetAssistant.Infrastructure.Security;
+using FleetAssistant.Infrastructure.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;

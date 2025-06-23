@@ -1,7 +1,6 @@
 using FleetAssistant.Infrastructure.Services;
 using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace FleetAssistant.Api.Middleware;
 

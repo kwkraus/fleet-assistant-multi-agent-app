@@ -1,7 +1,7 @@
+using FleetAssistant.Infrastructure.Plugins;
+using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
-using FleetAssistant.Shared.Models;
-using FleetAssistant.Infrastructure.Plugins;
 
 namespace FleetAssistant.Agents;
 
@@ -55,7 +55,7 @@ public abstract class BaseAgent
                     deploymentName: deploymentName,
                     endpoint: endpoint,
                     apiKey: apiKey);
-                
+
                 _logger.LogInformation("Added Azure OpenAI chat completion service for agent {AgentType}", GetType().Name);
             }
             else
@@ -67,14 +67,14 @@ public abstract class BaseAgent
             var kernel = kernelBuilder.Build();
             await RegisterIntegrationPluginsAsync(kernel, userContext.TenantId);
 
-            _logger.LogInformation("Created kernel for agent {AgentType} and tenant {TenantId}", 
+            _logger.LogInformation("Created kernel for agent {AgentType} and tenant {TenantId}",
                 GetType().Name, userContext.TenantId);
 
             return kernel;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create kernel for agent {AgentType} and tenant {TenantId}", 
+            _logger.LogError(ex, "Failed to create kernel for agent {AgentType} and tenant {TenantId}",
                 GetType().Name, userContext.TenantId);
             throw;
         }
@@ -89,7 +89,7 @@ public abstract class BaseAgent
     {
         try
         {
-            _logger.LogInformation("Registering integration plugins for agent {AgentType} and tenant {TenantId}", 
+            _logger.LogInformation("Registering integration plugins for agent {AgentType} and tenant {TenantId}",
                 GetType().Name, tenantId);
 
             if (_pluginRegistry == null)
@@ -100,14 +100,14 @@ public abstract class BaseAgent
 
             // Get capabilities this agent needs
             var requiredCapabilities = GetRequiredCapabilities();
-            
+
             // Load plugins that match the agent's capabilities
             var plugins = await _pluginRegistry.GetPluginsByCapabilitiesAsync(tenantId, requiredCapabilities);
 
             foreach (var plugin in plugins)
             {
                 kernel.Plugins.Add(plugin);
-                _logger.LogInformation("Added plugin {PluginName} to kernel for agent {AgentType}", 
+                _logger.LogInformation("Added plugin {PluginName} to kernel for agent {AgentType}",
                     plugin.Name, GetType().Name);
             }
 
@@ -116,7 +116,7 @@ public abstract class BaseAgent
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to register integration plugins for agent {AgentType} and tenant {TenantId}", 
+            _logger.LogError(ex, "Failed to register integration plugins for agent {AgentType} and tenant {TenantId}",
                 GetType().Name, tenantId);
             // Don't throw - allow agent to continue without plugins
         }

@@ -1,12 +1,11 @@
 using FleetAssistant.Agents;
 using FleetAssistant.Infrastructure.Configuration;
-using FleetAssistant.Infrastructure.Security;
 using FleetAssistant.Infrastructure.Plugins;
 using FleetAssistant.Infrastructure.Plugins.Integrations;
+using FleetAssistant.Infrastructure.Security;
 using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
-using Xunit;
 using Moq;
 
 namespace Tests.FleetAssistant.Agents;

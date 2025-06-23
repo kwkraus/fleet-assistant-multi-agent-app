@@ -3,7 +3,6 @@ using FleetAssistant.Shared.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Moq;
-using Xunit;
 
 namespace Tests.FleetAssistant.Agents;
 

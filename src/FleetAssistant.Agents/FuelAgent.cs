@@ -13,9 +13,9 @@ namespace FleetAssistant.Agents;
 public class FuelAgent : BaseAgent
 {
     public FuelAgent(
-        ILogger<FuelAgent> logger, 
-        IKernelBuilder kernelBuilder, 
-        IIntegrationPluginRegistry pluginRegistry) 
+        ILogger<FuelAgent> logger,
+        IKernelBuilder kernelBuilder,
+        IIntegrationPluginRegistry pluginRegistry)
         : base(logger, kernelBuilder, pluginRegistry)
     {
     }
@@ -30,7 +30,7 @@ public class FuelAgent : BaseAgent
     {
         try
         {
-            _logger.LogInformation("Fuel agent processing query for tenant {TenantId}: {Message}", 
+            _logger.LogInformation("Fuel agent processing query for tenant {TenantId}: {Message}",
                 userContext.TenantId, request.Message);
 
             // Create kernel with fuel-specific plugins

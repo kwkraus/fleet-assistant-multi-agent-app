@@ -1,6 +1,6 @@
+using FleetAssistant.Agents;
 using FleetAssistant.Api.Middleware;
 using FleetAssistant.Api.Services;
-using FleetAssistant.Agents;
 using FleetAssistant.Shared.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

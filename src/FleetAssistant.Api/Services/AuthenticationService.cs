@@ -47,7 +47,7 @@ public class AuthenticationService : IAuthenticationService
             InitializeDevelopmentApiKeys();
         }
     }
-    
+
     public async Task<UserContext?> ValidateApiKeyAndGetUserContextAsync(string? authHeader)
     {
         try
