@@ -14,24 +14,16 @@ namespace FleetAssistant.Api.Functions;
 /// <summary>
 /// Main HTTP endpoint for fleet queries
 /// </summary>
-public class FleetQueryFunction
+public class FleetQueryFunction(
+    ILogger<FleetQueryFunction> logger,
+    IAuthenticationService authenticationService,
+    TenantAuthorizationMiddleware tenantAuth,
+    PlanningAgent planningAgent)
 {
-    private readonly ILogger<FleetQueryFunction> _logger;
-    private readonly IAuthenticationService _authenticationService;
-    private readonly TenantAuthorizationMiddleware _tenantAuth;
-    private readonly PlanningAgent _planningAgent;
-
-    public FleetQueryFunction(
-        ILogger<FleetQueryFunction> logger,
-        IAuthenticationService authenticationService,
-        TenantAuthorizationMiddleware tenantAuth,
-        PlanningAgent planningAgent)
-    {
-        _logger = logger;
-        _authenticationService = authenticationService;
-        _tenantAuth = tenantAuth;
-        _planningAgent = planningAgent;
-    }
+    private readonly ILogger<FleetQueryFunction> _logger = logger;
+    private readonly IAuthenticationService _authenticationService = authenticationService;
+    private readonly TenantAuthorizationMiddleware _tenantAuth = tenantAuth;
+    private readonly PlanningAgent _planningAgent = planningAgent;
 
     [Function("FleetQuery")]
     public async Task<IActionResult> RunAsync(
@@ -39,8 +31,7 @@ public class FleetQueryFunction
     {
         var stopwatch = Stopwatch.StartNew();
         UserContext? userContext = null;
-        TenantAuthorizationResult? authResult = null;
-
+         
         try
         {
             _logger.LogInformation("Fleet query request received");
@@ -49,7 +40,9 @@ public class FleetQueryFunction
             var authHeader = req.Headers.Authorization.FirstOrDefault() ??
                            req.Headers["X-API-Key"].FirstOrDefault();
 
-            userContext = await _authenticationService.ValidateApiKeyAndGetUserContextAsync(authHeader); if (userContext == null)
+            userContext = await _authenticationService.ValidateApiKeyAndGetUserContextAsync(authHeader);
+            
+            if (userContext == null)
             {
                 _logger.LogWarning("Authentication failed for fleet query request");
                 return new UnauthorizedObjectResult(new
@@ -57,8 +50,11 @@ public class FleetQueryFunction
                     error = "Invalid or missing API key",
                     message = "Provide a valid API key in the Authorization header (Bearer <key>) or X-API-Key header"
                 });
-            }            // Validate tenant authorization and permissions
-            authResult = await _tenantAuth.ValidatePermissionAsync(userContext, Permissions.FleetQuery.Id);
+            }
+
+            // Validate tenant authorization and permissions
+            TenantAuthorizationResult? authResult = await _tenantAuth.ValidatePermissionAsync(userContext, Permissions.FleetQuery.Id);
+
             if (!authResult.IsSuccess)
             {
                 _logger.LogWarning("Authorization failed for tenant {TenantId}: {Error}",
@@ -91,6 +87,7 @@ public class FleetQueryFunction
             }
 
             FleetQueryRequest? queryRequest;
+
             try
             {
                 queryRequest = JsonSerializer.Deserialize<FleetQueryRequest>(requestBody, new JsonSerializerOptions
@@ -108,6 +105,7 @@ public class FleetQueryFunction
             {
                 return new BadRequestObjectResult(new { error = "Message is required" });
             }
+
             _logger.LogInformation("Processing query from API key {ApiKeyId} for tenant {TenantId}: {Message}",
                 userContext.ApiKeyId, userContext.TenantId, queryRequest.Message);
 
@@ -120,6 +118,7 @@ public class FleetQueryFunction
 
             // Add rate limit headers to response
             var rateLimitHeaders = authResult.GetRateLimitHeaders();
+
             foreach (var header in rateLimitHeaders)
             {
                 req.HttpContext.Response.Headers[header.Key] = header.Value;
