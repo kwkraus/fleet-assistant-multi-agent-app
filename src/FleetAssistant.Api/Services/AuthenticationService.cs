@@ -35,7 +35,7 @@ public class AuthenticationService : IAuthenticationService
     private readonly ILogger<AuthenticationService> _logger;
 
     // For MVP, we'll use in-memory storage. In production, this would be in a database
-    private static readonly Dictionary<string, ApiKeyInfo> _apiKeys = new();
+    private static readonly Dictionary<string, ApiKeyInfo> _apiKeys = [];
 
     public AuthenticationService(ILogger<AuthenticationService> logger)
     {
@@ -116,7 +116,7 @@ public class AuthenticationService : IAuthenticationService
             Name = name,
             TenantId = tenantId,
             Environment = environment,
-            Scopes = scopes ?? new List<string> { Permissions.FleetQuery.Id },
+            Scopes = scopes ?? [Permissions.FleetQuery.Id],
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };

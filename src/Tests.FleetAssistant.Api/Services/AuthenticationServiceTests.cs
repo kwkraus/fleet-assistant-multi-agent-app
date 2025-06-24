@@ -44,7 +44,9 @@ public class AuthenticationServiceTests
         var scopes = new List<string> { "fleet:read", "fleet:query" };
 
         // Act
-        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);        // Assert
+        var (apiKey, keyInfo) = await _authService.GenerateApiKeyAsync(tenantId, name, scopes);        
+        
+        // Assert
         Assert.NotNull(apiKey);
         Assert.StartsWith("fa_dev_", apiKey);
         Assert.Equal(31, apiKey.Length); // fa_dev_ (7) + 24 random chars
@@ -53,6 +55,7 @@ public class AuthenticationServiceTests
         Assert.Equal(scopes, keyInfo.Scopes);
         Assert.True(keyInfo.IsActive);
     }
+
     [Fact]
     public async Task ValidateApiKeyAndGetUserContextAsync_WithValidApiKey_ReturnsUserContext()
     {
