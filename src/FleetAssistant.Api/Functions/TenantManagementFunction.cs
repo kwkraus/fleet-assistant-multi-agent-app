@@ -37,7 +37,7 @@ public class TenantManagementFunction
     /// </summary>
     [Function("GetTenant")]
     public async Task<IActionResult> GetTenantAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "admin/tenant/{tenantId}")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tenant/{tenantId}")] HttpRequest req,
         string tenantId)
     {
         try
@@ -96,7 +96,7 @@ public class TenantManagementFunction
     /// </summary>
     [Function("ListTenants")]
     public async Task<IActionResult> ListTenantsAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "admin/tenants")] HttpRequest req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tenants")] HttpRequest req)
     {
         try
         {
@@ -154,7 +154,7 @@ public class TenantManagementFunction
     /// </summary>
     [Function("CreateTenant")]
     public async Task<IActionResult> CreateTenantAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/tenant")] HttpRequest req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant")] HttpRequest req)
     {
         try
         {
@@ -219,7 +219,7 @@ public class TenantManagementFunction
     /// </summary>
     [Function("UpdateTenant")]
     public async Task<IActionResult> UpdateTenantAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "admin/tenant/{tenantId}")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "tenant/{tenantId}")] HttpRequest req,
         string tenantId)
     {
         try
@@ -292,7 +292,7 @@ public class TenantManagementFunction
     /// </summary>
     [Function("SuspendTenant")]
     public async Task<IActionResult> SuspendTenantAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/tenant/{tenantId}/suspend")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenantId}/suspend")] HttpRequest req,
         string tenantId)
     {
         try
@@ -354,7 +354,7 @@ public class TenantManagementFunction
     /// </summary>
     [Function("ReactivateTenant")]
     public async Task<IActionResult> ReactivateTenantAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/tenant/{tenantId}/reactivate")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tenant/{tenantId}/reactivate")] HttpRequest req,
         string tenantId)
     {
         try
