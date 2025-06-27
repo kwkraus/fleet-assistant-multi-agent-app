@@ -1,16 +1,15 @@
 
-# Fleet Multi-Agent Virtual Assistant — Step-by-Step Blueprint (Azure AI Foundry Edition)
+# Fleet Assistant Agent Service Integration — Step-by-Step Blueprint
 
-This blueprint builds a multi-tenant fleet management AI assistant using **Azure AI Foundry** for LLM orchestration and **Semantic Kernel** for agent coordination. The system uses a single orchestrator that routes to specialized agents with tenant-specific integratio- **Supports enterprise authentication** with API Key and tenant isolations.
+This blueprint builds a simple fleet management AI assistant that connects to hosted agents in **Azure AI Foundry Agent Service**. The system uses **DefaultAzureCredential** for Entra ID authentication and streams responses back to the caller.
 
 ## Architecture Overview
 
-- **Single Azure Function** with orchestrator + specialized agents
-- **Planning Agent** coordinates all requests and calls sub-agents
-- **Tenant-specific Integration Plugins** (GeoTab, Fleetio, Samsara, etc.)
-- **Azure AI Foundry** for model routing and selection
-- **API Key** authentication with tenant isolation
-- **Graceful degradation** when integrations fail
+- **Single Azure Function** that connects to hosted agents
+- **Azure AI Foundry Agent Service** hosts the fleet management agent
+- **Entra ID authentication** via DefaultAzureCredential
+- **Streaming responses** from agent service to caller
+- **Simple message forwarding** with no local processing
 
 ---
 
@@ -20,267 +19,158 @@ This blueprint builds a multi-tenant fleet management AI assistant using **Azure
 ```text
 - Create solution `FleetAssistant.sln` with projects:
     - `FleetAssistant.Api` (.NET Azure Functions v4 - Single Function)
-    - `FleetAssistant.Agents` (class library for all agent implementations)
     - `FleetAssistant.Shared` (models, DTOs, utilities)
-    - `FleetAssistant.Infrastructure` (plugins, credentials, config)
     - `Tests.FleetAssistant.Api` (XUnit test project)
-    - `Tests.FleetAssistant.Agents` (XUnit test project)
 ```
 
 ---
 
-## 1. Build Planning Agent & Core Infrastructure
+## 1. Build Agent Service Integration
 
 ### 1.1. Create Main HTTP Endpoint
 ```text
 - In `FleetAssistant.Api`, add POST `/api/fleet/query`.
-- Accepts: `{ message: string, conversationHistory?: object[], context?: object }`.
-- API Key authentication with tenant validation.
-- Returns: `{ response: string, agentData: object, warnings?: string[] }`.
+- Accepts: `{ message: string, conversationId?: string, context?: object }`.
+- No authentication required for initial implementation.
+- Returns: Streaming response from Azure AI Foundry Agent Service.
 ```
 
-### 1.2. Implement Authentication & Authorization
+### 1.2. Implement Azure AI Foundry Agent Service Client
 ```text
-- Add API Key authentication middleware for tenant validation.
-- Extract tenant ID and permissions from API Key claims.
-- Support multiple header formats: Authorization: Bearer <key>, X-API-Key: <key>.
-- In-memory API key storage for MVP (evolve to database/Key Vault for production).
-- Test: Valid API key allows access, invalid/expired key returns 401.
+- Add Azure AI Foundry SDK NuGet package.
+- Configure DefaultAzureCredential for Entra ID authentication.
+- Create client to connect to hosted agent by Agent ID.
+- Handle streaming responses from agent service.
+- Forward responses directly to HTTP response stream.
 ```
 
-### 1.3. Implement Planning Agent with Azure AI Foundry
+### 1.3. Configure Agent Connection
 ```text
-- In `FleetAssistant.Agents`, create `PlanningAgent` class.
-- Instantiate Semantic Kernel with Azure AI Foundry model router:
-    - Use Azure AI Foundry SDK for model routing (no direct OpenAI calls).
-    - Pass tenantId and user context to Foundry for model selection.
-    - Create planning prompts to determine which sub-agents to call.
-- Example flow:
-    User: "What's the TCO for vehicle ABC123?"
-    Planning Agent: Determines needs fuel + maintenance + insurance data
-    Planning Agent: Calls FuelAgent, MaintenanceAgent, InsuranceAgent
-    Planning Agent: Aggregates results with graceful degradation
-- Test: Planning agent can parse user intent and route to appropriate sub-agents.
+- Store Agent Service endpoint and Agent ID in function app settings.
+- Use DefaultAzureCredential for authentication to Agent Service.
+- Configure managed identity for the Azure Function.
+- Test: Function can successfully connect to and communicate with hosted agent.
 ```
 
 ---
 
-## 2. Build Integration Plugin System
+## 2. Implement Response Streaming
 
-### 2.1. Define Integration Plugin Interfaces
+### 2.1. Configure Streaming Response
 ```text
-- In `FleetAssistant.Infrastructure`:
-    - `IIntegrationPluginBuilder` with:
-        string Key { get; }
-        Task<KernelPlugin?> BuildPluginAsync(string tenantId);
-    - `IIntegrationConfigStore` for getting tenant-enabled integrations.
-    - `ICredentialStore` for secure tenant credential retrieval.
-    - `IntegrationPluginRegistry` that DI-injects all builders.
+- Implement Server-Sent Events (SSE) or WebSocket streaming.
+- Forward agent service streaming responses to client in real-time.
+- Handle connection timeouts and interruptions gracefully.
+- Implement proper error handling for streaming scenarios.
 ```
 
-### 2.2. Implement Configuration & Credential Stores
+### 2.2. Add Response Processing
 ```text
-- `IntegrationConfigStore`:
-    - `GetEnabledIntegrationsAsync(tenantId)` returns list of enabled integration keys.
-    - Use `IDistributedCache` with 30min TTL for tenant configs.
-    - Stub implementation returns hardcoded list for testing.
-- `CredentialStore`:
-    - `GetCredentialsAsync(tenantId, integrationKey)` returns auth details.
-    - Stub implementation with fake credentials, later implement Key Vault.
-- Test: Config store returns correct enabled integrations per tenant.
-```
-
-### 2.3. Create Stub Integration Plugin Builders
-```text
-- Add concrete plugin builders in `FleetAssistant.Infrastructure`:
-    - `GeoTabPluginBuilder`, `FleetioPluginBuilder`, `SamsaraPluginBuilder`
-    - Each implements `IIntegrationPluginBuilder` with unique Key.
-    - BuildPluginAsync() creates Semantic Kernel plugin with dummy methods.
-    - Example: GeoTabPlugin with `GetFuelDataAsync(vehicleId, startDate, endDate)`.
-- Wire builders into `IntegrationPluginRegistry` via DI.
-- Test: Registry returns correct builder by key; builder creates working plugin.
+- Minimal response processing - primarily pass-through.
+- Add basic logging for request/response tracking.
+- Implement request/response correlation IDs.
+- Test: Streaming responses work correctly for various message types.
 ```
 
 ---
 
-## 3. Build Specialized Agents
+## 3. Error Handling & Monitoring
 
-### 3.1. Create Base Agent Infrastructure
+### 3.1. Implement Error Handling
 ```text
-- In `FleetAssistant.Agents`, create `BaseAgent` abstract class:
-    - Protected method for creating Azure AI Foundry-enabled kernel per agent.
-    - `RegisterIntegrationPluginsAsync(kernel, tenantId)` method.
-    - Error handling for graceful degradation.
-- Each agent gets its own kernel instance with relevant plugins only.
+- Handle Azure AI Foundry Agent Service connectivity issues.
+- Implement retry logic with exponential backoff.
+- Handle authentication failures and token refresh.
+- Return appropriate HTTP status codes for different error scenarios.
 ```
 
-### 3.2. Implement Fuel Agent
+### 3.2. Add Basic Monitoring
 ```text
-- Create `FuelAgent` inheriting from `BaseAgent`.
-- `GetFuelAnalysisAsync(tenantId, vehicleId, timeframe, conversationContext)`.
-- Agent creates its own kernel with Azure AI Foundry router.
-- Dynamically loads fuel-related integration plugins based on tenant config.
-- Returns structured fuel data or graceful error message.
-- Test: Agent can process fuel queries with mock integrations.
-```
-
-### 3.3. Implement Additional Specialist Agents
-```text
-- Create `MaintenanceAgent`, `InsuranceAgent`, `TaxAgent` following same pattern.
-- Each agent:
-    - Has its own Azure AI Foundry-enabled kernel.
-    - Loads only relevant integration plugins for its domain.
-    - Handles errors gracefully (returns partial data + warnings).
-    - Accepts conversation context from Planning Agent.
-- Test: Each agent can process domain-specific queries independently.
-```
-
-### 3.4. Wire Agents into Planning Agent
-```text
-- Planning Agent orchestrates calls to specialist agents:
-    - Analyzes user intent to determine which agents to call.
-    - Passes relevant context (vehicleId, timeframe) to each agent.
-    - Aggregates responses with graceful degradation.
-    - Returns combined response with warnings for any failed agents.
-- Integration test: End-to-end flow through planning agent to specialist agents.
+- Application Insights integration for request tracking.
+- Log agent service calls and response times.
+- Monitor authentication success/failure rates.
+- Track streaming response performance metrics.
 ```
 
 ---
 
-## 4. Implement Real Integration Plugins
+## 4. Testing Strategy
 
-### 4.1. Build GeoTab Integration Plugin
+### 4.1. Unit Tests
 ```text
-- Implement real GeoTab API client in `GeoTabPluginBuilder`.
-- Methods: `GetFuelDataAsync`, `GetMaintenanceDataAsync`, `GetVehicleDataAsync`.
-- Use tenant credentials from `ICredentialStore`.
-- Implement session caching with `IDistributedCache`:
-    - Cache GeoTab session tokens with TTL (6 hours).
-    - Refresh sessions automatically on expiration.
-- Handle API errors gracefully (return null, log warnings).
-- Test: Plugin successfully authenticates and retrieves mock data from GeoTab.
+- Test Azure AI Foundry Agent Service client with mocked responses.
+- Test streaming response handling and error scenarios.
+- Test authentication and credential management.
+- Mock agent service connections for isolated testing.
 ```
 
-### 4.2. Implement Additional Integration Plugins
+### 4.2. Integration Tests
 ```text
-- Create `FleetioPluginBuilder`, `SamsaraPluginBuilder` following GeoTab pattern.
-- Each plugin handles its own authentication, session management, and caching.
-- Plugins pull their own detailed configuration on-demand (not from planning agent).
-- Standardize error handling across all plugins.
-- Test: Multiple plugins can operate simultaneously for multi-integration tenants.
+- End-to-end tests with real Azure AI Foundry Agent Service.
+- Test streaming responses with various message types and lengths.
+- Test authentication with DefaultAzureCredential in Azure environment.
+- Test error handling when agent service is unavailable.
 ```
 
----
-
-## 5. Implement Advanced Features
-
-### 5.1. Add Comprehensive Error Handling & Observability
+### 4.3. Performance Tests
 ```text
-- Wrap all agent calls, plugin operations, and external API calls in try/catch.
-- Use structured logging with tenantId, userId, agentType, integrationKey context.
-- Add OpenTelemetry tracing for:
-    - HTTP requests to the main endpoint
-    - Planning agent orchestration
-    - Individual agent execution
-    - Integration plugin API calls
-- Return HTTP 500 with traceId for unhandled exceptions.
-- Test: Verify proper error boundaries and logging in failure scenarios.
-```
-
-### 5.2. Enhance Configuration Management
-```text
-- Implement production-ready `IntegrationConfigStore`:
-    - Database-backed tenant configuration storage.
-    - Admin API endpoints for managing tenant integrations.
-    - Cache invalidation mechanisms for real-time updates.
-- Implement production `CredentialStore` with Azure Key Vault.
-- Add configuration validation and health checks.
-- Test: Configuration changes propagate correctly to agents.
+- Test concurrent requests to agent service.
+- Measure streaming response latency and throughput.
+- Test authentication token refresh under load.
+- Verify memory usage during long streaming responses.
 ```
 
 ---
 
-## 6. Testing Strategy
+## 5. Production Readiness
 
-### 6.1. Unit Tests
+### 5.1. Security Configuration
 ```text
-- Test all agents independently with mocked dependencies.
-- Test plugin builders and integration factories.
-- Test configuration stores with different tenant scenarios.
-- Test authentication and authorization logic.
-- Mock Azure AI Foundry and external integration APIs.
+- Configure managed identity for Azure Function.
+- Grant appropriate permissions to Azure AI Foundry Agent Service.
+- Implement input validation and sanitization.
+- Enable HTTPS-only communication.
+- Configure CORS for frontend integration.
 ```
 
-### 6.2. Integration Tests
-```text
-- End-to-end tests through planning agent to specialist agents.
-- Test multi-tenant scenarios with different integration portfolios.
-- Test graceful degradation when integrations fail.
-- Test conversation context passing between planning agent and sub-agents.
-- Test with real Azure AI Foundry integration (staging environment).
-```
-
-### 6.3. Load & Performance Tests
-```text
-- Test concurrent requests from multiple tenants.
-- Verify caching effectiveness for configurations and sessions.
-- Test Azure AI Foundry rate limiting and fallback behavior.
-- Measure response times for complex multi-agent scenarios.
-```
-
----
-
-## 7. Production Readiness
-
-### 7.1. Security Hardening
-```text
-- Implement comprehensive input validation and sanitization.
-- Add rate limiting per tenant/user (deferred from initial implementation).
-- Audit logging for all tenant data access.
-- Encrypt all cached data (Redis encryption at rest).
-- Regular security scanning of dependencies.
-```
-
-### 7.2. Monitoring & Alerting
+### 5.2. Monitoring & Alerting
 ```text
 - Application Insights dashboards for key metrics:
-    - Request volume and response times per tenant
-    - Agent success/failure rates
-    - Integration plugin health
-    - Azure AI Foundry usage and costs
-- Alerts for system health, error rates, and cost thresholds.
-- Log analytics queries for troubleshooting tenant issues.
+    - Request volume and response times
+    - Agent service connectivity and success rates
+    - Authentication success/failure rates
+    - Streaming response performance
+- Alerts for system health and error rates.
+- Log analytics for troubleshooting issues.
 ```
 
 ---
 
-## 8. Infrastructure as Code & Cloud Provisioning
+## 6. Infrastructure as Code & Cloud Provisioning
 
-### 8.1. Azure Resource Provisioning
+### 6.1. Azure Resource Provisioning
 ```text
 - Create Bicep/Terraform templates for:
-    - Azure Function App (single function, multiple agents)
-    - Azure Cache for Redis (configuration, session, and integration caching)
-    - Azure Key Vault (tenant credentials and secrets)
+    - Azure Function App (single function for agent service integration)
+    - Azure AI Foundry workspace and agent service
     - Application Insights (monitoring and telemetry)
-    - Azure AI Foundry resources (model routing and management)
-    - Azure SQL Database (tenant configuration and audit logs)
+    - Managed Identity configuration
 - Environment-specific parameter files (dev, staging, production).
 ```
 
-### 8.2. Configuration Management
+### 6.2. Configuration Management
 ```text
 - Environment-specific app settings for Azure Function.
-- Connection strings for Redis, SQL, and Key Vault.
-- Azure AI Foundry configuration (endpoints, keys, model preferences).
-- Feature flags for gradual rollout of new integrations.
+- Azure AI Foundry Agent Service endpoint and agent ID configuration.
+- Managed identity permissions for agent service access.
+- Application Insights connection strings.
 ```
 
 ---
 
-## 9. CI/CD Pipeline Implementation
+## 7. CI/CD Pipeline Implementation
 
-### 9.1. GitHub Actions Workflow
+### 7.1. GitHub Actions Workflow
 ```text
 - Configure GitHub Actions pipeline:
     - On PR: restore, build, run unit tests, run integration tests
@@ -290,83 +180,83 @@ This blueprint builds a multi-tenant fleet management AI assistant using **Azure
 - Automated rollback mechanisms for failed deployments.
 ```
 
-### 9.2. Deployment Strategy
+### 7.2. Deployment Strategy
 ```text
 - Blue-green deployment for zero-downtime updates.
-- Database migration scripts with rollback procedures.
-- Configuration drift detection and remediation.
+- Infrastructure deployment with Bicep/Terraform.
 - Post-deployment health checks and monitoring.
+- Configuration validation in each environment.
 ```
 
 ---
 
-## 10. Best Practices & Architecture Decisions
+## 8. Best Practices & Architecture Decisions
 
-### 10.1. Key Architectural Principles
-- **Single Function Architecture**: Reduces cold starts, simplifies deployment
-- **Orchestrator-First Design**: Planning agent coordinates all interactions
-- **Per-Agent Kernels**: Clean separation with Azure AI Foundry integration
-- **Hybrid Configuration**: Lightweight planning, detailed plugin-level config
-- **Graceful Degradation**: System provides value even when integrations fail
-- **Tenant Isolation**: Complete separation of data and configurations
+### 8.1. Key Architectural Principles
+- **Simple Proxy Architecture**: Minimal processing, focus on reliable message forwarding
+- **Hosted Agent Integration**: Leverage Azure AI Foundry Agent Service capabilities
+- **Entra ID Authentication**: Secure, enterprise-ready authentication via managed identity
+- **Streaming First**: Real-time response streaming for better user experience
+- **Cloud-Native**: Fully leverages Azure platform services
 
-### 10.2. Future Evolution Paths
-- **Conversation Management**: Can evolve from UI-managed to server-side Redis storage
-- **Rate Limiting**: Add tenant-specific quotas and cost controls in production
-- **Plugin Granularity**: Split integration plugins by capability if needed
-- **Multi-Region**: Expand to multiple Azure regions for global deployment
-- **Event-Driven**: Add Service Bus for asynchronous plugin processing
+### 8.2. Future Evolution Paths
+- **Multi-Tenancy**: Add tenant isolation and configuration when needed
+- **Rate Limiting**: Implement per-user quotas and cost controls
+- **Caching**: Add response caching for frequently asked questions
+- **Multiple Agents**: Connect to different agents based on query type
+- **Advanced Routing**: Implement intelligent agent selection logic
 
 ---
 
-## 11. Final Developer Onboarding & Execution
+## 9. Final Developer Onboarding & Execution
 
-### 11.1. Development Workflow
+### 9.1. Development Workflow
 ```text
 - Clone repository and set up local development environment.
-- Configure local Azure AI Foundry connection and development credentials.
-- Run solution locally with stub integrations for initial development.
-- Follow incremental development approach:
-    1. Get planning agent working with basic routing
-    2. Add one specialist agent at a time
-    3. Implement one integration plugin at a time
-    4. Add advanced features (caching, error handling, monitoring)
-- Comprehensive testing at each stage before moving to next component.
+- Configure local Azure credentials for development (Azure CLI login).
+- Set up Azure AI Foundry workspace and deploy fleet management agent.
+- Configure function app settings with agent service details.
+- Run solution locally with Azure Function Core Tools.
+- Test with hosted agent service connection.
 ```
 
-### 11.2. Production Deployment Checklist
+### 9.2. Production Deployment Checklist
 ```text
 - All unit and integration tests passing
-- Security review completed (authentication, authorization, data encryption)
-- Performance testing completed with expected load
+- Managed identity configured and permissions granted
+- Azure AI Foundry Agent Service deployed and accessible
 - Monitoring and alerting configured
-- Disaster recovery procedures documented
-- Tenant onboarding and integration configuration workflows tested
-- Azure AI Foundry quotas and cost controls configured
+- Performance testing completed with expected load
 - Documentation complete for operations team
 ```
 
 ---
 
-## 12. Summary
+## 10. Summary
 
-This blueprint provides a **production-ready, multi-tenant fleet management AI assistant** that:
+This blueprint provides a **simple, production-ready fleet assistant** that:
 
-✅ **Starts with the orchestrator** for logical architecture development  
-✅ **Uses single Azure Function** for simplified deployment and reduced cold starts  
-✅ **Implements per-agent kernels** with Azure AI Foundry for clean separation  
-✅ **Provides tenant-specific integrations** through dynamic plugin system  
-✅ **Handles failures gracefully** with partial results and clear error messages  
-✅ **Supports enterprise authentication** with OIDC/OAuth and role-based access  
-✅ **Maintains conversation context** through UI-managed state (evolvable to server-side)  
-✅ **Follows production best practices** for security, monitoring, and scalability  
+✅ **Connects to Azure AI Foundry Agent Service** for hosted agent capabilities  
+✅ **Uses single Azure Function** for simplified deployment and minimal overhead  
+✅ **Implements Entra ID authentication** via DefaultAzureCredential and managed identity  
+✅ **Streams responses in real-time** for better user experience  
+✅ **Focuses on reliable message forwarding** with minimal local processing  
+✅ **Follows Azure best practices** for authentication, monitoring, and security  
 
 **Key Benefits:**
-- **Extensible**: Add new integrations without core code changes
-- **Scalable**: Multi-tenant with proper isolation and caching
-- **Resilient**: Graceful degradation when external services fail
-- **Maintainable**: Clear separation of concerns and comprehensive testing
-- **Enterprise-Ready**: Authentication, authorization, monitoring, and audit trails
+- **Simple**: Minimal complexity, easy to understand and maintain
+- **Secure**: Enterprise-ready authentication via Entra ID
+- **Scalable**: Leverages Azure AI Foundry Agent Service scalability
+- **Performant**: Streaming responses with low latency
+- **Cloud-Native**: Fully leverages Azure platform capabilities
 
-**Next Steps:** Follow the blueprint incrementally, starting with the planning agent and building out specialist agents one at a time. The architecture supports continuous evolution and feature additions without major refactoring.
+**Next Steps:** 
+1. Set up Azure AI Foundry workspace and deploy fleet management agent
+2. Create Azure Function with agent service integration
+3. Configure managed identity and permissions
+4. Implement streaming response handling
+5. Add monitoring and error handling
+6. Deploy and test end-to-end functionality
+
+The architecture supports future enhancements like multi-tenancy, advanced routing, and additional agents without major refactoring.
 
