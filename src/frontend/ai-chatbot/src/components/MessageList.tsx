@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 interface ChatMessage {
@@ -15,9 +16,33 @@ interface MessageListProps {
 }
 
 export default function MessageList({ messages, isLoading }: MessageListProps) {
-  return (
-    <div className="flex-1 overflow-y-auto space-y-4">
-      {messages.length === 0 ? (
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
+      setShowScrollButton(!isNearBottom);
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
+    return (
+    <div className="flex flex-col h-full relative">
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto space-y-4 pb-4 scroll-smooth chat-scroll"
+        onScroll={handleScroll}
+      >
+        {messages.length === 0 ? (
         <div className="text-center text-gray-500 mt-8">
           <div className="max-w-md mx-auto">
             <h2 className="text-lg font-semibold mb-2">Welcome to Fleet Assistant</h2>
@@ -110,6 +135,23 @@ export default function MessageList({ messages, isLoading }: MessageListProps) {
             </div>
           )}
         </>
+      )}
+      {/* Scroll anchor */}
+      <div ref={messagesEndRef} />
+      </div>
+      
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-4 right-4 bg-blue-500 text-white p-2 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-10"
+          aria-label="Scroll to bottom"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M7 13l3 3 3-3" />
+            <path d="M7 6l3 3 3-3" />
+          </svg>
+        </button>
       )}
     </div>
   );
