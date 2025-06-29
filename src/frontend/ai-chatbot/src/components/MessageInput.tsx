@@ -5,7 +5,7 @@ import { FormEvent, KeyboardEvent } from 'react';
 interface MessageInputProps {
   input: string;
   isLoading: boolean;
-  onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSend: (e: FormEvent<HTMLFormElement>) => void;
 }
 

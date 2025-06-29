@@ -1,10 +1,16 @@
 'use client';
 
-import { Message } from 'ai';
 import ReactMarkdown from 'react-markdown';
 
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  createdAt?: Date;
+}
+
 interface MessageListProps {
-  messages: Message[];
+  messages: ChatMessage[];
   isLoading: boolean;
 }
 
