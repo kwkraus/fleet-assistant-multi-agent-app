@@ -89,7 +89,7 @@ public class ChatFunction(
 
             var completeResponse = responseBuilder.ToString().Trim();
 
-            // Return the response in the exact format the AI SDK expects
+            // Return the response in the exact format the AI SDK expects with conversationId
             var chatMessage = new ChatMessage
             {
                 Id = messageId,
@@ -98,12 +98,19 @@ public class ChatFunction(
                 CreatedAt = DateTime.UtcNow
             };
 
-            var jsonResponse = JsonSerializer.Serialize(chatMessage, new JsonSerializerOptions
+            // Create response object that includes the conversationId
+            var response = new
+            {
+                message = chatMessage,
+                conversationId = conversationId
+            };
+
+            var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
 
-            _logger.LogInformation("Successfully completed chat response. CorrelationId: {CorrelationId}", correlationId);
+            _logger.LogInformation("Successfully completed chat response. ConversationId: {ConversationId}, CorrelationId: {CorrelationId}", conversationId, correlationId);
 
             return new ContentResult
             {

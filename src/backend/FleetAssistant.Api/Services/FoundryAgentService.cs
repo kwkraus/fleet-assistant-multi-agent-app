@@ -1,8 +1,11 @@
+using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 using FleetAssistant.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace FleetAssistant.Api.Services;
 
@@ -13,49 +16,28 @@ public class FoundryAgentService : IAgentServiceClient
 {
     private readonly ILogger<FoundryAgentService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly HttpClient _httpClient;
-    private readonly string _endpoint;
+    private readonly PersistentAgentsClient _agentClient;
     private readonly string _agentId;
+    
+    // Thread management: conversationId -> threadId mapping
+    private readonly ConcurrentDictionary<string, string> _conversationThreadMap;
 
     public FoundryAgentService(
         ILogger<FoundryAgentService> logger,
-        IConfiguration configuration,
-        HttpClient httpClient)
+        IConfiguration configuration)
     {
         _logger = logger;
         _configuration = configuration;
-        _httpClient = httpClient;
+        _conversationThreadMap = new ConcurrentDictionary<string, string>();
 
         // Get configuration values
-        _endpoint = _configuration["FOUNDRY_AGENT_ENDPOINT"]
+        var endpoint = _configuration["FOUNDRY_AGENT_ENDPOINT"]
             ?? throw new InvalidOperationException("FOUNDRY_AGENT_ENDPOINT configuration is required");
 
         _agentId = _configuration["AgentService:AgentId"]
             ?? throw new InvalidOperationException("AgentService:AgentId configuration is required");
 
-        // Setup authentication
-        SetupAuthentication();
-
-        _logger.LogInformation("FoundryAgentService initialized with endpoint: {Endpoint}, AgentId: {AgentId}",
-            _endpoint, _agentId);
-    }
-
-    /// <summary>
-    /// Setup authentication for Azure AI Foundry
-    /// </summary>
-    private void SetupAuthentication()
-    {
-        // Check if we have an API key for development/testing
-        var apiKey = _configuration["FOUNDRY_API_KEY"];
-        if (!string.IsNullOrEmpty(apiKey))
-        {
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-            _logger.LogInformation("Using API Key authentication for Azure AI Foundry");
-            return;
-        }
-
-        // Use DefaultAzureCredential for production scenarios
-        _logger.LogInformation("Using DefaultAzureCredential for Azure AI Foundry authentication");
+        // Initialize PersistentAgentClient with DefaultAzureCredential
         var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
         {
             ExcludeEnvironmentCredential = false,
@@ -67,10 +49,10 @@ public class FoundryAgentService : IAgentServiceClient
             ExcludeInteractiveBrowserCredential = true // Disable for headless scenarios
         });
 
-        // Get token for Azure AI services
-        var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { "https://cognitiveservices.azure.com/.default" });
-        var token = credential.GetToken(tokenRequestContext, CancellationToken.None);
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token.Token}");
+        _agentClient = new PersistentAgentsClient(endpoint, credential);
+
+        _logger.LogInformation("FoundryAgentService initialized with endpoint: {Endpoint}, AgentId: {AgentId}",
+            endpoint, _agentId);
     }
 
     /// <summary>
@@ -81,14 +63,149 @@ public class FoundryAgentService : IAgentServiceClient
         string message,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Sending message to Azure AI Foundry agent: {Message}, ConversationId: {ConversationId}", message, conversationId);
+        _logger.LogInformation("Sending message to Azure AI Foundry agent: {Message}, ConversationId: {ConversationId}", 
+            message, conversationId);
 
-        // For now, create a fallback implementation that simulates the real service
-        var responseEnumerable = SendMessageWithFallbackAsync(message, cancellationToken);
-        await foreach (var chunk in responseEnumerable)
+        IAsyncEnumerable<string> responseStream;
+        
+        try
+        {
+            responseStream = SendMessageToAgentAsync(conversationId, message, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error communicating with Azure AI Foundry agent");
+            responseStream = SendMessageWithFallbackAsync(message, cancellationToken);
+        }
+
+        await foreach (var chunk in responseStream)
         {
             yield return chunk;
         }
+    }
+
+    /// <summary>
+    /// Sends message to the Azure AI Foundry agent
+    /// </summary>
+    private async IAsyncEnumerable<string> SendMessageToAgentAsync(
+        string conversationId,
+        string message,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        // Get or create thread for this conversation
+        var threadId = await GetOrCreateThreadAsync(conversationId, cancellationToken);
+        
+        // Add user message to thread
+        var threadMessage = await _agentClient.Messages.CreateMessageAsync(
+            threadId, 
+            MessageRole.User, 
+            message, 
+            cancellationToken: cancellationToken);
+
+        // Create and stream agent run
+        await foreach (var chunk in StreamAgentResponseAsync(threadId, cancellationToken))
+        {
+            yield return chunk;
+        }
+
+        _logger.LogInformation("Successfully completed Azure AI Foundry agent interaction");
+    }
+
+    #region Private Methods
+
+    /// <summary>
+    /// Gets existing thread ID for conversation or creates a new one
+    /// </summary>
+    private async Task<string> GetOrCreateThreadAsync(string conversationId, CancellationToken cancellationToken)
+    {
+        // If we have an existing thread for this conversation, use it
+        if (!string.IsNullOrEmpty(conversationId) && 
+            _conversationThreadMap.TryGetValue(conversationId, out var existingThreadId))
+        {
+            _logger.LogDebug("Using existing thread {ThreadId} for conversation {ConversationId}", 
+                existingThreadId, conversationId);
+            return existingThreadId;
+        }
+
+        // Create new thread
+        var threadResponse = await _agentClient.Threads.CreateThreadAsync(cancellationToken: cancellationToken);
+        var newThreadId = threadResponse.Value.Id;
+
+        // Map conversation to thread if conversationId is provided
+        if (!string.IsNullOrEmpty(conversationId))
+        {
+            _conversationThreadMap.TryAdd(conversationId, newThreadId);
+            _logger.LogInformation("Created new thread {ThreadId} for conversation {ConversationId}", 
+                newThreadId, conversationId);
+        }
+        else
+        {
+            _logger.LogInformation("Created new thread {ThreadId} for anonymous conversation", newThreadId);
+        }
+
+        return newThreadId;
+    }
+
+    /// <summary>
+    /// Streams the agent response from a thread run
+    /// </summary>
+    private async IAsyncEnumerable<string> StreamAgentResponseAsync(
+        string threadId,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Create a run for the agent on this thread
+        var runResponse = await _agentClient.Runs.CreateRunAsync(threadId, _agentId, cancellationToken: cancellationToken);
+        var run = runResponse.Value;
+        _logger.LogDebug("Created run {RunId} for thread {ThreadId}", run.Id, threadId);
+
+        // Poll the run until completion
+        do
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+            var runStatusResponse = await _agentClient.Runs.GetRunAsync(threadId, run.Id, cancellationToken);
+            run = runStatusResponse.Value;
+        }
+        while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress);
+
+        if (run.Status != RunStatus.Completed)
+        {
+            _logger.LogError("Run failed with status: {Status}, Error: {Error}", run.Status, run.LastError?.Message);
+            yield return "[Error] The agent run did not complete successfully. ";
+            yield break;
+        }
+
+        // Get messages from the thread (latest first)
+        var messages = _agentClient.Messages.GetMessagesAsync(threadId, order: ListSortOrder.Descending, cancellationToken: cancellationToken);
+        
+        await foreach (var message in messages)
+        {
+            // Get the first assistant message (most recent)
+            if (message.Role == MessageRole.Agent)
+            {
+                foreach (var contentItem in message.ContentItems)
+                {
+                    if (contentItem is MessageTextContent textContent)
+                    {
+                        // Stream the response word by word
+                        var words = textContent.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var word in words)
+                        {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                _logger.LogInformation("Streaming cancelled by client");
+                                yield break;
+                            }
+
+                            yield return word + " ";
+                            await Task.Delay(75, cancellationToken);
+                        }
+                    }
+                }
+                break; // Only process the first (most recent) assistant message
+            }
+        }
+
+        _logger.LogDebug("Completed streaming for run {RunId}", run.Id);
     }
 
     /// <summary>
@@ -98,10 +215,10 @@ public class FoundryAgentService : IAgentServiceClient
         string message,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        string responsePrefix = "";
-        string responseContent = "";
         bool hasError = false;
 
+        string responsePrefix;
+        string responseContent;
         try
         {
             _logger.LogInformation("Processing request through Azure AI Foundry integration layer");
@@ -242,4 +359,6 @@ public class FoundryAgentService : IAgentServiceClient
                    "route optimization, safety, and cost analysis. What specific area interests you?";
         }
     }
+
+    #endregion
 }

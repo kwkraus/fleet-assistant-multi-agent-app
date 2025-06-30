@@ -17,9 +17,16 @@ export default function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setInput(e.target.value);
+  };
+
+  const clearConversation = () => {
+    setMessages([]);
+    setConversationId(null);
+    console.log('Conversation cleared');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,25 +49,54 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
+      const requestBody: {
+        messages: { id: string; role: string; content: string }[];
+        conversationId?: string;
+      } = {
+        messages: [...messages, userMessage].map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content
+        }))
+      };
+
+      // Include conversationId if we have one
+      if (conversationId) {
+        requestBody.conversationId = conversationId;
+      }
+
       const response = await fetch(`${azureFunctionsBaseUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messages: [...messages, userMessage].map(msg => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content
-          }))
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const assistantMessage: ChatMessage = await response.json();
+      const responseData = await response.json();
+      
+      // Handle both old format (direct message) and new format (with conversationId)
+      let assistantMessage: ChatMessage;
+      let newConversationId: string | null = null;
+
+      if (responseData.message && responseData.conversationId) {
+        // New format with conversationId
+        assistantMessage = responseData.message;
+        newConversationId = responseData.conversationId;
+      } else {
+        // Fallback to old format (direct message)
+        assistantMessage = responseData;
+      }
+
+      // Store the conversationId for future requests
+      if (newConversationId && !conversationId) {
+        setConversationId(newConversationId);
+        console.log('New conversation started with ID:', newConversationId);
+      }
       
       // Add assistant message
       setMessages(prev => [...prev, assistantMessage]);
@@ -85,8 +121,25 @@ export default function Chat() {
       {/* Header */}
       <div className="bg-white border-b px-4 py-4 shadow-sm">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-xl font-semibold text-gray-900">Fleet Assistant</h1>
-          <p className="text-sm text-gray-600">Your AI-powered fleet management assistant</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Fleet Assistant</h1>
+              <p className="text-sm text-gray-600">Your AI-powered fleet management assistant</p>
+            </div>
+            {conversationId && (
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  Session: {conversationId.substring(0, 8)}...
+                </div>
+                <button
+                  onClick={clearConversation}
+                  className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-300 rounded hover:bg-red-50 transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
