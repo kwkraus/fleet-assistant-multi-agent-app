@@ -11,6 +11,18 @@ interface ChatMessage {
   createdAt?: Date;
 }
 
+interface SSEEventData {
+  type: string;
+  data: {
+    conversationId?: string;
+    messageId?: string;
+    content?: string;
+    message?: string;
+    timestamp?: string;
+    totalContent?: string;
+  };
+}
+
 export default function Chat() {
   const azureFunctionsBaseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTIONS_BASE_URL || 'http://localhost:7071';
   
@@ -18,6 +30,8 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  // Add streaming indicator state
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -48,6 +62,19 @@ export default function Chat() {
     setInput('');
     setIsLoading(true);
 
+    // Create assistant message placeholder
+    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessage: ChatMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '', // Start empty for streaming
+      createdAt: new Date()
+    };
+
+    // Add assistant message placeholder
+    setMessages(prev => [...prev, assistantMessage]);
+    setStreamingMessageId(assistantMessageId); // Mark as streaming
+
     try {
       const requestBody: {
         messages: { id: string; role: string; content: string }[];
@@ -69,6 +96,7 @@ export default function Chat() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
         body: JSON.stringify(requestBody)
       });
@@ -77,42 +105,117 @@ export default function Chat() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const responseData = await response.json();
-      
-      // Handle both old format (direct message) and new format (with conversationId)
-      let assistantMessage: ChatMessage;
-      let newConversationId: string | null = null;
-
-      if (responseData.message && responseData.conversationId) {
-        // New format with conversationId
-        assistantMessage = responseData.message;
-        newConversationId = responseData.conversationId;
-      } else {
-        // Fallback to old format (direct message)
-        assistantMessage = responseData;
+      if (!response.body) {
+        throw new Error('No response body for streaming');
       }
 
-      // Store the conversationId for future requests
-      if (newConversationId && !conversationId) {
-        setConversationId(newConversationId);
-        console.log('New conversation started with ID:', newConversationId);
-      }
-      
-      // Add assistant message
-      setMessages(prev => [...prev, assistantMessage]);
+      // Handle streaming response
+      await handleStreamingResponse(response.body, assistantMessageId);
+
     } catch (error) {
       console.error('Chat error:', error);
       
-      // Add error message
-      const errorMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error processing your request. Please try again.',
-        createdAt: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // Update assistant message with error
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === assistantMessageId 
+            ? { ...msg, content: 'Sorry, I encountered an error processing your request. Please try again.' }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
+      setStreamingMessageId(null); // Clear streaming indicator on any exit
+    }
+  };
+
+  const handleStreamingResponse = async (body: ReadableStream<Uint8Array>, messageId: string) => {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break;
+        }
+
+        // Decode the chunk and add to buffer
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // Process complete lines (SSE events end with \n\n)
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.trim() === '') continue;
+          
+          // Parse SSE event
+          const dataMatch = line.match(/^data: (.+)$/m);
+          if (dataMatch) {
+            try {
+              const eventData = JSON.parse(dataMatch[1]);
+              await handleSSEEvent(eventData, messageId);
+            } catch (parseError) {
+              console.error('Error parsing SSE event:', parseError, 'Raw data:', dataMatch[1]);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error reading stream:', error);
+      throw error;
+    } finally {
+      reader.releaseLock();
+    }
+  };
+
+  const handleSSEEvent = async (eventData: SSEEventData, messageId: string) => {
+    const { type, data } = eventData;
+
+    switch (type) {
+      case 'metadata':
+        // Handle metadata (conversationId, etc.)
+        if (data.conversationId && !conversationId) {
+          setConversationId(data.conversationId);
+          console.log('New conversation started with ID:', data.conversationId);
+        }
+        break;
+
+      case 'chunk':
+        // Progressively update message content
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === messageId 
+              ? { ...msg, content: msg.content + (data.content || '') }
+              : msg
+          )
+        );
+        break;
+
+      case 'done':
+        // Streaming completed
+        console.log('Streaming completed for message:', messageId);
+        setStreamingMessageId(null); // Clear streaming indicator
+        break;
+
+      case 'error':
+        // Handle streaming error
+        console.error('Streaming error:', data.message);
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === messageId 
+              ? { ...msg, content: msg.content + '\n\n⚠️ An error occurred while generating the response.' }
+              : msg
+          )
+        );
+        break;
+
+      default:
+        console.warn('Unknown SSE event type:', type);
     }
   };
 

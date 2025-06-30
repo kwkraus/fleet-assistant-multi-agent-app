@@ -67,57 +67,71 @@ public class ChatFunction(
             _logger.LogInformation("Processing chat message: {Message}, ConversationId: {ConversationId}, CorrelationId: {CorrelationId}",
                 lastUserMessage.Content, conversationId, correlationId);
 
-            // Set CORS headers
+            // Set CORS headers for streaming
             req.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
             req.HttpContext.Response.Headers.AccessControlAllowMethods = "POST, OPTIONS";
             req.HttpContext.Response.Headers.AccessControlAllowHeaders = "Content-Type, Authorization";
+            
+            // Set Server-Sent Events headers
+            req.HttpContext.Response.Headers.ContentType = "text/event-stream";
+            req.HttpContext.Response.Headers.CacheControl = "no-cache";
+            req.HttpContext.Response.Headers.Connection = "keep-alive";
 
             var messageId = Guid.NewGuid().ToString();
-            var responseBuilder = new StringBuilder();
 
-            // Collect the complete response
-            await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(conversationId, lastUserMessage.Content, req.HttpContext.RequestAborted))
+            try
             {
-                if (req.HttpContext.RequestAborted.IsCancellationRequested)
+                // Send initial metadata event
+                await WriteSSEEvent(req.HttpContext.Response, "metadata", new
                 {
-                    _logger.LogInformation("Chat request cancelled. CorrelationId: {CorrelationId}", correlationId);
-                    break;
+                    conversationId = conversationId,
+                    messageId = messageId,
+                    timestamp = DateTime.UtcNow
+                }, req.HttpContext.RequestAborted);
+
+                var contentBuilder = new StringBuilder();
+
+                // Stream chunks as they arrive
+                await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(conversationId, lastUserMessage.Content, req.HttpContext.RequestAborted))
+                {
+                    if (req.HttpContext.RequestAborted.IsCancellationRequested)
+                    {
+                        _logger.LogInformation("Chat request cancelled during streaming. CorrelationId: {CorrelationId}", correlationId);
+                        break;
+                    }
+
+                    contentBuilder.Append(chunk);
+
+                    // Send chunk event
+                    await WriteSSEEvent(req.HttpContext.Response, "chunk", new
+                    {
+                        content = chunk
+                    }, req.HttpContext.RequestAborted);
                 }
 
-                responseBuilder.Append(chunk);
+                // Send completion event
+                await WriteSSEEvent(req.HttpContext.Response, "done", new
+                {
+                    messageId = messageId,
+                    totalContent = contentBuilder.ToString().Trim(),
+                    timestamp = DateTime.UtcNow
+                }, req.HttpContext.RequestAborted);
+
+                _logger.LogInformation("Successfully completed streaming chat response. ConversationId: {ConversationId}, CorrelationId: {CorrelationId}", conversationId, correlationId);
+            }
+            catch (Exception streamingException)
+            {
+                _logger.LogError(streamingException, "Error during streaming. CorrelationId: {CorrelationId}", correlationId);
+                
+                // Send error event
+                await WriteSSEEvent(req.HttpContext.Response, "error", new
+                {
+                    message = "An error occurred while streaming the response.",
+                    correlationId = correlationId
+                }, CancellationToken.None);
             }
 
-            var completeResponse = responseBuilder.ToString().Trim();
-
-            // Return the response in the exact format the AI SDK expects with conversationId
-            var chatMessage = new ChatMessage
-            {
-                Id = messageId,
-                Role = "assistant",
-                Content = completeResponse,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            // Create response object that includes the conversationId
-            var response = new
-            {
-                message = chatMessage,
-                conversationId = conversationId
-            };
-
-            var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-
-            _logger.LogInformation("Successfully completed chat response. ConversationId: {ConversationId}, CorrelationId: {CorrelationId}", conversationId, correlationId);
-
-            return new ContentResult
-            {
-                Content = jsonResponse,
-                ContentType = "application/json",
-                StatusCode = 200
-            };
+            return new EmptyResult();
         }
         catch (OperationCanceledException)
         {
@@ -149,5 +163,29 @@ public class ChatFunction(
         req.HttpContext.Response.Headers.AccessControlMaxAge = "86400";
 
         return new OkResult();
+    }
+
+    /// <summary>
+    /// Helper method to write Server-Sent Events to the response stream
+    /// </summary>
+    private static async Task WriteSSEEvent(HttpResponse response, string eventType, object data, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(new { type = eventType, data }, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            var sseData = $"data: {json}\n\n";
+            var bytes = Encoding.UTF8.GetBytes(sseData);
+            
+            await response.Body.WriteAsync(bytes, cancellationToken);
+            await response.Body.FlushAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException || cancellationToken.IsCancellationRequested)
+        {
+            // Client disconnected, ignore
+        }
     }
 }
