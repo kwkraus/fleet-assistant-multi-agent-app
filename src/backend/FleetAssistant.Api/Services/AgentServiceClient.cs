@@ -1,4 +1,3 @@
-using FleetAssistant.Shared.Models;
 using FleetAssistant.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
@@ -17,13 +16,14 @@ public class AgentServiceClient(ILogger<AgentServiceClient> logger, HttpClient h
     /// Sends a message to the agent service and streams the response
     /// </summary>
     public async IAsyncEnumerable<string> SendMessageStreamAsync(
-        FleetQueryRequest request,
+        string conversationId,
+        string message,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Sending message to agent service: {Message}", request.Message);
+        _logger.LogInformation("Sending message to agent service: {Message}, ConversationId: {ConversationId}", message, conversationId);
 
         // Generate mock response
-        var mockResponse = GenerateMockFleetResponse(request.Message);
+        var mockResponse = GenerateMockFleetResponse(message);
         var words = mockResponse.Split(' ');
 
         foreach (var word in words)

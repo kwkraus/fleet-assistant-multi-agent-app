@@ -61,15 +61,11 @@ public class ChatFunction(
                 return new BadRequestObjectResult(new { error = "At least one user message is required" });
             }
 
-            // Convert to FleetQueryRequest
-            var fleetRequest = new FleetQueryRequest
-            {
-                Message = lastUserMessage.Content,
-                Context = chatRequest.Options
-            };
+            // Extract conversationId
+            var conversationId = chatRequest.ConversationId ?? Guid.NewGuid().ToString();
 
-            _logger.LogInformation("Processing chat message: {Message}, CorrelationId: {CorrelationId}",
-                fleetRequest.Message, correlationId);
+            _logger.LogInformation("Processing chat message: {Message}, ConversationId: {ConversationId}, CorrelationId: {CorrelationId}",
+                lastUserMessage.Content, conversationId, correlationId);
 
             // Set CORS headers
             req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
@@ -80,7 +76,7 @@ public class ChatFunction(
             var responseBuilder = new StringBuilder();
 
             // Collect the complete response
-            await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(fleetRequest, req.HttpContext.RequestAborted))
+            await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(conversationId, lastUserMessage.Content, req.HttpContext.RequestAborted))
             {
                 if (req.HttpContext.RequestAborted.IsCancellationRequested)
                 {
@@ -140,10 +136,10 @@ public class ChatFunction(
     {
         _logger.LogInformation("Handling CORS preflight for chat endpoint");
 
-        req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
-        req.HttpContext.Response.Headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
-        req.HttpContext.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
-        req.HttpContext.Response.Headers["Access-Control-Max-Age"] = "86400";
+        req.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
+        req.HttpContext.Response.Headers.AccessControlAllowMethods = "POST, OPTIONS";
+        req.HttpContext.Response.Headers.AccessControlAllowHeaders = "Content-Type, Authorization";
+        req.HttpContext.Response.Headers.AccessControlMaxAge = "86400";
 
         return new OkResult();
     }
