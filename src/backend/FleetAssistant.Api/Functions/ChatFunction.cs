@@ -68,9 +68,9 @@ public class ChatFunction(
                 lastUserMessage.Content, conversationId, correlationId);
 
             // Set CORS headers
-            req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
-            req.HttpContext.Response.Headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
-            req.HttpContext.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+            req.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
+            req.HttpContext.Response.Headers.AccessControlAllowMethods = "POST, OPTIONS";
+            req.HttpContext.Response.Headers.AccessControlAllowHeaders = "Content-Type, Authorization";
 
             var messageId = Guid.NewGuid().ToString();
             var responseBuilder = new StringBuilder();
