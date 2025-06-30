@@ -1,9 +1,9 @@
+using FleetAssistant.Api.Services;
+using FleetAssistant.Shared.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using FleetAssistant.Shared.Services;
-using FleetAssistant.Api.Services;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 

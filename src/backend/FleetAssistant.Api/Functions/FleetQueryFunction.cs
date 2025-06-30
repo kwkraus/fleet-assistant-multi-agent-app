@@ -17,7 +17,7 @@ public class FleetQueryFunction(
     public async Task<IActionResult> RunAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "fleet/query")] HttpRequest req)
     {
-        
+
         throw new NotImplementedException("FleetQueryFunction is not implemented yet. Please implement the logic for handling fleet queries.");
     }
 }

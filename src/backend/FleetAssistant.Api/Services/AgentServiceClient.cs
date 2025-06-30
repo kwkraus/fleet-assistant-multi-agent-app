@@ -2,29 +2,22 @@ using FleetAssistant.Shared.Models;
 using FleetAssistant.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace FleetAssistant.Api.Services;
 
 /// <summary>
 /// Implementation of agent service client for Azure AI Foundry integration
 /// </summary>
-public class AgentServiceClient : IAgentServiceClient
+public class AgentServiceClient(ILogger<AgentServiceClient> logger, HttpClient httpClient) : IAgentServiceClient
 {
-    private readonly ILogger<AgentServiceClient> _logger;
-    private readonly HttpClient _httpClient;
-
-    public AgentServiceClient(ILogger<AgentServiceClient> logger, HttpClient httpClient)
-    {
-        _logger = logger;
-        _httpClient = httpClient;
-    }
+    private readonly ILogger<AgentServiceClient> _logger = logger;
+    private readonly HttpClient _httpClient = httpClient;
 
     /// <summary>
     /// Sends a message to the agent service and streams the response
     /// </summary>
     public async IAsyncEnumerable<string> SendMessageStreamAsync(
-        FleetQueryRequest request, 
+        FleetQueryRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Sending message to agent service: {Message}", request.Message);
@@ -32,7 +25,7 @@ public class AgentServiceClient : IAgentServiceClient
         // Generate mock response
         var mockResponse = GenerateMockFleetResponse(request.Message);
         var words = mockResponse.Split(' ');
-        
+
         foreach (var word in words)
         {
             if (cancellationToken.IsCancellationRequested)

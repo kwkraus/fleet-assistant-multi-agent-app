@@ -1,8 +1,7 @@
-using System.Net.Http;
+using FleetAssistant.Shared.Models;
 using System.Text;
 using System.Text.Json;
 using Xunit;
-using FleetAssistant.Shared.Models;
 
 namespace Tests.FleetAssistant.Api.Integration;
 
@@ -42,7 +41,7 @@ public class ChatFunctionTests
 
             // Assert
             Assert.True(response.IsSuccessStatusCode, $"Expected success but got {response.StatusCode}");
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
             Assert.NotEmpty(responseContent);
             Assert.Contains("maintenance", responseContent.ToLowerInvariant());

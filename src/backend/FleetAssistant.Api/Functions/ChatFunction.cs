@@ -1,11 +1,11 @@
+using FleetAssistant.Shared.Models;
+using FleetAssistant.Shared.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using FleetAssistant.Shared.Models;
-using FleetAssistant.Shared.Services;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
 
 namespace FleetAssistant.Api.Functions;
 
@@ -68,7 +68,7 @@ public class ChatFunction(
                 Context = chatRequest.Options
             };
 
-            _logger.LogInformation("Processing chat message: {Message}, CorrelationId: {CorrelationId}", 
+            _logger.LogInformation("Processing chat message: {Message}, CorrelationId: {CorrelationId}",
                 fleetRequest.Message, correlationId);
 
             // Set CORS headers
@@ -78,7 +78,7 @@ public class ChatFunction(
 
             var messageId = Guid.NewGuid().ToString();
             var responseBuilder = new StringBuilder();
-            
+
             // Collect the complete response
             await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(fleetRequest, req.HttpContext.RequestAborted))
             {
@@ -139,7 +139,7 @@ public class ChatFunction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "options", Route = "chat")] HttpRequest req)
     {
         _logger.LogInformation("Handling CORS preflight for chat endpoint");
-        
+
         req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
         req.HttpContext.Response.Headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
         req.HttpContext.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
