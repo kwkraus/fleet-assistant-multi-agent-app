@@ -30,8 +30,6 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  // Add streaming indicator state
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -57,23 +55,10 @@ export default function Chat() {
       createdAt: new Date()
     };
 
-    // Add user message immediately
+    // Add only the user message and set loading state
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsLoading(true);
-
-    // Create assistant message placeholder
-    const assistantMessageId = (Date.now() + 1).toString();
-    const assistantMessage: ChatMessage = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '', // Start empty for streaming
-      createdAt: new Date()
-    };
-
-    // Add assistant message placeholder
-    setMessages(prev => [...prev, assistantMessage]);
-    setStreamingMessageId(assistantMessageId); // Mark as streaming
+    setIsLoading(true); // This will show the "Thinking" animation
 
     try {
       const requestBody: {
@@ -110,29 +95,29 @@ export default function Chat() {
       }
 
       // Handle streaming response
-      await handleStreamingResponse(response.body, assistantMessageId);
+      await handleStreamingResponse(response.body);
 
     } catch (error) {
       console.error('Chat error:', error);
       
-      // Update assistant message with error
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: 'Sorry, I encountered an error processing your request. Please try again.' }
-            : msg
-        )
-      );
+      // Add error message as assistant response
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        createdAt: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      setStreamingMessageId(null); // Clear streaming indicator on any exit
     }
   };
 
-  const handleStreamingResponse = async (body: ReadableStream<Uint8Array>, messageId: string) => {
+  const handleStreamingResponse = async (body: ReadableStream<Uint8Array>) => {
     const reader = body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let assistantMessageId: string | null = null;
 
     try {
       while (true) {
@@ -158,7 +143,7 @@ export default function Chat() {
           if (dataMatch) {
             try {
               const eventData = JSON.parse(dataMatch[1]);
-              await handleSSEEvent(eventData, messageId);
+              assistantMessageId = await handleSSEEvent(eventData, assistantMessageId);
             } catch (parseError) {
               console.error('Error parsing SSE event:', parseError, 'Raw data:', dataMatch[1]);
             }
@@ -173,7 +158,7 @@ export default function Chat() {
     }
   };
 
-  const handleSSEEvent = async (eventData: SSEEventData, messageId: string) => {
+  const handleSSEEvent = async (eventData: SSEEventData, messageId: string | null): Promise<string | null> => {
     const { type, data } = eventData;
 
     switch (type) {
@@ -183,39 +168,73 @@ export default function Chat() {
           setConversationId(data.conversationId);
           console.log('New conversation started with ID:', data.conversationId);
         }
-        break;
+        return messageId;
 
       case 'chunk':
-        // Progressively update message content
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === messageId 
-              ? { ...msg, content: msg.content + (data.content || '') }
-              : msg
-          )
-        );
-        break;
+        // Create assistant message on first chunk if it doesn't exist
+        if (!messageId) {
+          const newAssistantMessageId = (Date.now() + 1).toString();
+          const assistantMessage: ChatMessage = {
+            id: newAssistantMessageId,
+            role: 'assistant',
+            content: data.content || '',
+            createdAt: new Date()
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+          setIsLoading(false); // Hide the "Thinking" animation
+          return newAssistantMessageId;
+        } else {
+          // Append chunk to existing message
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === messageId 
+                ? { ...msg, content: msg.content + (data.content || '') }
+                : msg
+            )
+          );
+          return messageId;
+        }
 
       case 'done':
         // Streaming completed
         console.log('Streaming completed for message:', messageId);
-        setStreamingMessageId(null); // Clear streaming indicator
-        break;
+        setIsLoading(false); // Ensure loading is false
+        return messageId;
 
       case 'error':
         // Handle streaming error
         console.error('Streaming error:', data.message);
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === messageId 
-              ? { ...msg, content: msg.content + '\n\n⚠️ An error occurred while generating the response.' }
-              : msg
-          )
-        );
-        break;
+        if (!messageId) {
+          // Create error message if no assistant message exists yet
+          const errorMessageId = (Date.now() + 1).toString();
+          const errorMessage: ChatMessage = {
+            id: errorMessageId,
+            role: 'assistant',
+            content: '⚠️ An error occurred while generating the response.',
+            createdAt: new Date()
+          };
+          setMessages(prev => [...prev, errorMessage]);
+          setIsLoading(false);
+          return errorMessageId;
+        } else {
+          // Append error to existing message
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === messageId 
+                ? { 
+                    ...msg, 
+                    content: msg.content + '\n\n⚠️ An error occurred while generating the response.'
+                  }
+                : msg
+            )
+          );
+          setIsLoading(false);
+          return messageId;
+        }
 
       default:
         console.warn('Unknown SSE event type:', type);
+        return messageId;
     }
   };
 
