@@ -258,7 +258,7 @@ export default function Chat() {
       }
     >
       {/* Messages Container */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <ChatMessageList 
           messages={messages} 
           isLoading={isLoading} 
