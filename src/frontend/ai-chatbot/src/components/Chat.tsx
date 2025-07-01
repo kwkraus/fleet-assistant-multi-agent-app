@@ -242,6 +242,7 @@ export default function Chat() {
 
   return (
     <PageLayout
+      className="h-full"
       header={
         <ChatHeader 
           conversationId={conversationId}
