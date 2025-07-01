@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import MessageList from './MessageList';
-import MessageInput from './MessageInput';
+import { ChatHeader } from './chat/ChatHeader';
+import { ChatMessageList } from './chat/ChatMessageList';
+import { ChatInput } from './chat/ChatInput';
+import { PageLayout } from './layout/PageLayout';
 
 interface ChatMessage {
   id: string;
@@ -31,7 +33,7 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
 
@@ -239,46 +241,29 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b px-4 py-4 shadow-sm">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Fleet Assistant</h1>
-              <p className="text-sm text-gray-600">Your AI-powered fleet management assistant</p>
-            </div>
-            {conversationId && (
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                  Session: {conversationId.substring(0, 8)}...
-                </div>
-                <button
-                  onClick={clearConversation}
-                  className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-300 rounded hover:bg-red-50 transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
+    <PageLayout
+      header={
+        <ChatHeader 
+          conversationId={conversationId}
+          onClearConversation={clearConversation}
+        />
+      }
+      footer={
+        <ChatInput
+          input={input}
+          isLoading={isLoading}
+          onInputChange={handleInputChange}
+          onSend={handleSubmit}
+        />
+      }
+    >
       {/* Messages Container */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full max-w-4xl mx-auto px-4 py-4">
-          <MessageList messages={messages} isLoading={isLoading} />
-        </div>
+        <ChatMessageList 
+          messages={messages} 
+          isLoading={isLoading} 
+        />
       </div>
-
-      {/* Input Area */}
-      <MessageInput
-        input={input}
-        isLoading={isLoading}
-        onInputChange={handleInputChange}
-        onSend={handleSubmit}
-      />
-    </div>
+    </PageLayout>
   );
 }
