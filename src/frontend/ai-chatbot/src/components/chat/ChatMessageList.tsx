@@ -38,8 +38,8 @@ export function ChatMessageList({ messages, isLoading, className }: ChatMessageL
   }
 
   return (
-    <div className={cn("flex-1 min-h-0 flex flex-col", className)}>
-      <div className="flex-1 overflow-y-auto chat-scroll">
+    <div className={cn("flex-1 min-h-0 overflow-hidden", className)}>
+      <div className="h-full overflow-y-auto chat-scroll">
         <Container size="lg">
           <div className="py-4 md:py-6">
             {messages.map((message, index) => (
@@ -86,76 +86,76 @@ function ChatWelcomeScreen() {
   ]
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 overflow-y-auto chat-scroll">
+    <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="h-full overflow-y-auto chat-scroll">
         <Container size="md">
           <div className="flex flex-col items-center justify-center py-8 md:py-12">
-          {/* Welcome Header */}
-          <div className="text-center mb-8 md:mb-12">
-            <div className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-primary rounded-2xl mb-4 md:mb-6 mx-auto">
-              <MessageCircle className="h-8 w-8 md:h-10 md:w-10 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2 md:mb-3">
-              Welcome to {APP_NAME}
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
-              Your AI-powered fleet management assistant. I&apos;m here to help you optimize 
-              operations, track maintenance, and improve efficiency.
-            </p>
-          </div>
-
-          {/* Feature Grid */}
-          <div className="w-full mb-8 md:mb-12">
-            <h2 className="text-lg md:text-xl font-semibold text-center mb-4 md:mb-6">
-              What can I help you with?
-            </h2>
-            <Grid 
-              cols={{ 
-                default: 1, 
-                sm: 2, 
-                lg: 4 
-              }} 
-              gap="lg"
-            >
-              {features.map((feature, index) => (
-                <GridItem key={index}>
-                  <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer group">
-                    <CardContent className="p-4 md:p-6 text-center">
-                      <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg mb-3 md:mb-4 mx-auto group-hover:bg-primary/20 transition-colors">
-                        <feature.icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-sm md:text-base mb-2">
-                        {feature.title}
-                      </h3>
-                      <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </GridItem>
-              ))}
-            </Grid>
-          </div>
-
-          {/* Quick Start Suggestions */}
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-4">
-              Try asking me something like:
-            </p>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                &quot;What maintenance is due for my fleet this week?&quot;
-              </p>
-              <p className="text-sm font-medium text-foreground">
-                &quot;Show me the most fuel-efficient routes&quot;
-              </p>
-              <p className="text-sm font-medium text-foreground">
-                &quot;Generate a safety compliance report&quot;
+            {/* Welcome Header */}
+            <div className="text-center mb-8 md:mb-12">
+              <div className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-primary rounded-2xl mb-4 md:mb-6 mx-auto">
+                <MessageCircle className="h-8 w-8 md:h-10 md:w-10 text-primary-foreground" />
+              </div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2 md:mb-3">
+                Welcome to {APP_NAME}
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
+                Your AI-powered fleet management assistant. I&apos;m here to help you optimize 
+                operations, track maintenance, and improve efficiency.
               </p>
             </div>
+
+            {/* Feature Grid */}
+            <div className="w-full mb-8 md:mb-12">
+              <h2 className="text-lg md:text-xl font-semibold text-center mb-4 md:mb-6">
+                What can I help you with?
+              </h2>
+              <Grid 
+                cols={{ 
+                  default: 1, 
+                  sm: 2, 
+                  lg: 4 
+                }} 
+                gap="lg"
+              >
+                {features.map((feature, index) => (
+                  <GridItem key={index}>
+                    <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer group">
+                      <CardContent className="p-4 md:p-6 text-center">
+                        <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg mb-3 md:mb-4 mx-auto group-hover:bg-primary/20 transition-colors">
+                          <feature.icon className="h-6 w-6 text-primary" />
+                        </div>
+                        <h3 className="font-semibold text-sm md:text-base mb-2">
+                          {feature.title}
+                        </h3>
+                        <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
+                          {feature.description}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </GridItem>
+                ))}
+              </Grid>
+            </div>
+
+            {/* Quick Start Suggestions */}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-4">
+                Try asking me something like:
+              </p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  &quot;What maintenance is due for my fleet this week?&quot;
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  &quot;Show me the most fuel-efficient routes&quot;
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  &quot;Generate a safety compliance report&quot;
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      </Container>
+        </Container>
       </div>
     </div>
   )
