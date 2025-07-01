@@ -116,3 +116,37 @@
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 #f1f5f9;
 }
+
+/* Mobile-first viewport height utilities */
+@layer utilities {
+  /* Use dynamic viewport height for mobile browsers */
+  .h-screen-mobile {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for modern browsers */
+  }
+  
+  /* Ensure proper height calculation on mobile devices */
+  @supports (height: 100dvh) {
+    .h-screen {
+      height: 100dvh;
+    }
+  }
+  
+  /* Fallback for older browsers */
+  @supports not (height: 100dvh) {
+    .h-screen {
+      height: 100vh;
+    }
+  }
+  
+  /* Safe area insets for devices with notches/home indicators */
+  @supports (padding: max(0px)) {
+    .pb-safe {
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+    
+    .pt-safe {
+      padding-top: max(0px, env(safe-area-inset-top));
+    }
+  }
+}

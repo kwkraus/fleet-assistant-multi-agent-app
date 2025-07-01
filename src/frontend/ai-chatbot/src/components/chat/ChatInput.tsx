@@ -66,11 +66,11 @@ export function ChatInput({
 
   return (
     <div className={cn(
-      "sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+      "border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
       className
     )}>
       <Container size="lg">
-        <div className="py-3 md:py-4 space-y-3 md:space-y-4">
+        <div className="py-3 md:py-4 space-y-3 md:space-y-4 pb-safe">
           {/* Quick Action Prompts */}
           {!input && (
             <div className="flex flex-wrap gap-2">

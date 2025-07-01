@@ -241,13 +241,22 @@ export default function Chat() {
   };
 
   return (
-    <PageLayout>
-      {/* Header */}
-      <ChatHeader 
-        conversationId={conversationId}
-        onClearConversation={clearConversation}
-      />
-
+    <PageLayout
+      header={
+        <ChatHeader 
+          conversationId={conversationId}
+          onClearConversation={clearConversation}
+        />
+      }
+      footer={
+        <ChatInput
+          input={input}
+          isLoading={isLoading}
+          onInputChange={handleInputChange}
+          onSend={handleSubmit}
+        />
+      }
+    >
       {/* Messages Container */}
       <div className="flex-1 overflow-hidden">
         <ChatMessageList 
@@ -255,14 +264,6 @@ export default function Chat() {
           isLoading={isLoading} 
         />
       </div>
-
-      {/* Input Area */}
-      <ChatInput
-        input={input}
-        isLoading={isLoading}
-        onInputChange={handleInputChange}
-        onSend={handleSubmit}
-      />
     </PageLayout>
   );
 }
