@@ -108,22 +108,21 @@ function ChatWelcomeScreen() {
             </h2>
             <Grid 
               cols={{ 
-                default: 2, 
-                md: 4 
+                default: 4
               }} 
-              gap="md"
+              gap="sm"
             >
               {features.map((feature, index) => (
                 <GridItem key={index}>
                   <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer group">
-                    <CardContent className="p-3 md:p-4 text-center">
-                      <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg mb-2 md:mb-3 mx-auto group-hover:bg-primary/20 transition-colors">
-                        <feature.icon className="h-5 w-5 text-primary" />
+                    <CardContent className="p-2 text-center">
+                      <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-lg mb-1 mx-auto group-hover:bg-primary/20 transition-colors">
+                        <feature.icon className="h-4 w-4 text-primary" />
                       </div>
-                      <h3 className="font-semibold text-sm md:text-base mb-2">
+                      <h3 className="font-semibold text-xs mb-1">
                         {feature.title}
                       </h3>
-                      <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-tight">
                         {feature.description}
                       </p>
                     </CardContent>
