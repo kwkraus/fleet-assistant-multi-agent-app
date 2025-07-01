@@ -40,7 +40,7 @@ export function ChatMessageList({ messages, isLoading, className }: ChatMessageL
 
   return (
     <div className={cn("flex-1 min-h-0 flex flex-col", className)}>
-      <div className="flex-1 overflow-y-auto chat-scroll" style={{ maxHeight: '200px' }}>
+      <div className="flex-1 overflow-y-auto chat-scroll">
         <Container size="lg">
           <div className="py-4 md:py-6">
             {messages.map((message, index) => (
