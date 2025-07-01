@@ -5,7 +5,6 @@ import { MessageCircle, Zap, Route, Shield, DollarSign } from "lucide-react"
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage"
 import { Card, CardContent } from "@/components/ui/card"
 import { Container } from "@/components/layout/Container"
-import { Grid, GridItem } from "@/components/layout/Grid"
 import { APP_NAME } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 
@@ -106,14 +105,9 @@ function ChatWelcomeScreen() {
             <h2 className="text-lg md:text-xl font-semibold text-center mb-4 md:mb-6">
               What can I help you with?
             </h2>
-            <Grid 
-              cols={{ 
-                default: 4
-              }} 
-              gap="sm"
-            >
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {features.map((feature, index) => (
-                <GridItem key={index}>
+                <div key={index}>
                   <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer group">
                     <CardContent className="p-2 text-center">
                       <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-lg mb-1 mx-auto group-hover:bg-primary/20 transition-colors">
@@ -127,9 +121,9 @@ function ChatWelcomeScreen() {
                       </p>
                     </CardContent>
                   </Card>
-                </GridItem>
+                </div>
               ))}
-            </Grid>
+            </div>
           </div>
 
           {/* Quick Start Suggestions */}
