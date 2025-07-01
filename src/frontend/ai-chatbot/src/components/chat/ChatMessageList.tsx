@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react"
 import { MessageCircle, Zap, Route, Shield, DollarSign } from "lucide-react"
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent } from "@/components/ui/card"
 import { Container } from "@/components/layout/Container"
 import { Grid, GridItem } from "@/components/layout/Grid"
@@ -87,9 +86,10 @@ function ChatWelcomeScreen() {
   ]
 
   return (
-    <div className="flex-1 overflow-auto">
-      <Container size="md">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] py-8 md:py-12">
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 overflow-y-auto chat-scroll">
+        <Container size="md">
+          <div className="flex flex-col items-center justify-center min-h-full py-8 md:py-12">
           {/* Welcome Header */}
           <div className="text-center mb-8 md:mb-12">
             <div className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-primary rounded-2xl mb-4 md:mb-6 mx-auto">
@@ -156,6 +156,7 @@ function ChatWelcomeScreen() {
           </div>
         </div>
       </Container>
+      </div>
     </div>
   )
 }
