@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Copy, CheckCheck, User, Bot } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from 'remark-gfm'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -72,6 +73,7 @@ export function ChatMessage({ message, isLastMessage, className }: ChatMessagePr
             {isAssistant ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     p: ({ children }) => (
                       <p className="mb-2 last:mb-0 leading-relaxed text-sm md:text-base">
@@ -111,6 +113,68 @@ export function ChatMessage({ message, isLastMessage, className }: ChatMessagePr
                       <blockquote className="border-l-4 border-border pl-4 italic my-2">
                         {children}
                       </blockquote>
+                    ),
+                    h1: ({ children }) => (
+                      <h1 className="text-lg md:text-xl font-bold mb-3 mt-4 first:mt-0">
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-base md:text-lg font-bold mb-2 mt-3 first:mt-0">
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-sm md:text-base font-semibold mb-2 mt-3 first:mt-0">
+                        {children}
+                      </h3>
+                    ),
+                    h4: ({ children }) => (
+                      <h4 className="text-sm md:text-base font-semibold mb-1 mt-2 first:mt-0">
+                        {children}
+                      </h4>
+                    ),
+                    h5: ({ children }) => (
+                      <h5 className="text-xs md:text-sm font-semibold mb-1 mt-2 first:mt-0">
+                        {children}
+                      </h5>
+                    ),
+                    h6: ({ children }) => (
+                      <h6 className="text-xs md:text-sm font-medium mb-1 mt-2 first:mt-0">
+                        {children}
+                      </h6>
+                    ),
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto my-3">
+                        <table className="min-w-full border-collapse border border-border rounded-md">
+                          {children}
+                        </table>
+                      </div>
+                    ),
+                    thead: ({ children }) => (
+                      <thead className="bg-muted">
+                        {children}
+                      </thead>
+                    ),
+                    tbody: ({ children }) => (
+                      <tbody>
+                        {children}
+                      </tbody>
+                    ),
+                    tr: ({ children }) => (
+                      <tr className="border-b border-border">
+                        {children}
+                      </tr>
+                    ),
+                    th: ({ children }) => (
+                      <th className="border border-border px-3 py-2 text-left text-xs md:text-sm font-semibold">
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children }) => (
+                      <td className="border border-border px-3 py-2 text-xs md:text-sm">
+                        {children}
+                      </td>
                     ),
                   }}
                 >
