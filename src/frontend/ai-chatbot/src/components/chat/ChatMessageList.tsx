@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react"
 import { MessageCircle, Zap, Route, Shield, DollarSign } from "lucide-react"
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent } from "@/components/ui/card"
 import { Container } from "@/components/layout/Container"
 import { Grid, GridItem } from "@/components/layout/Grid"
@@ -39,25 +38,23 @@ export function ChatMessageList({ messages, isLoading, className }: ChatMessageL
   }
 
   return (
-    <div className={cn("flex-1 overflow-hidden", className)}>
-      <ScrollArea className="h-full chat-scroll">
-        <Container size="lg">
-          <div className="py-4 md:py-6">
-            {messages.map((message, index) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                isLastMessage={index === messages.length - 1}
-              />
-            ))}
-            
-            {isLoading && <ChatMessageLoading />}
-            
-            {/* Scroll anchor */}
-            <div ref={messagesEndRef} className="h-1" />
-          </div>
-        </Container>
-      </ScrollArea>
+    <div className={cn("h-full overflow-y-auto chat-scroll", className)}>
+      <Container size="lg">
+        <div className="py-4 md:py-6">
+          {messages.map((message, index) => (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              isLastMessage={index === messages.length - 1}
+            />
+          ))}
+          
+          {isLoading && <ChatMessageLoading />}
+          
+          {/* Scroll anchor */}
+          <div ref={messagesEndRef} className="h-1" />
+        </div>
+      </Container>
     </div>
   )
 }
@@ -87,9 +84,9 @@ function ChatWelcomeScreen() {
   ]
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="h-full overflow-y-auto chat-scroll">
       <Container size="md">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] py-8 md:py-12">
+        <div className="flex flex-col items-center justify-center py-8 md:py-12">
           {/* Welcome Header */}
           <div className="text-center mb-8 md:mb-12">
             <div className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-primary rounded-2xl mb-4 md:mb-6 mx-auto">

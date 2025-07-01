@@ -242,6 +242,7 @@ export default function Chat() {
 
   return (
     <PageLayout
+      className="h-full"
       header={
         <ChatHeader 
           conversationId={conversationId}
@@ -257,13 +258,10 @@ export default function Chat() {
         />
       }
     >
-      {/* Messages Container */}
-      <div className="flex-1 overflow-hidden">
-        <ChatMessageList 
-          messages={messages} 
-          isLoading={isLoading} 
-        />
-      </div>
+      <ChatMessageList 
+        messages={messages} 
+        isLoading={isLoading} 
+      />
     </PageLayout>
   );
 }
