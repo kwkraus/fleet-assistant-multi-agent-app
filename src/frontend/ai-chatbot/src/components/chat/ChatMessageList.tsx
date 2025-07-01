@@ -5,7 +5,6 @@ import { MessageCircle, Zap, Route, Shield, DollarSign } from "lucide-react"
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage"
 import { Card, CardContent } from "@/components/ui/card"
 import { Container } from "@/components/layout/Container"
-import { Grid, GridItem } from "@/components/layout/Grid"
 import { APP_NAME } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 
@@ -106,32 +105,25 @@ function ChatWelcomeScreen() {
             <h2 className="text-lg md:text-xl font-semibold text-center mb-4 md:mb-6">
               What can I help you with?
             </h2>
-            <Grid 
-              cols={{ 
-                default: 1, 
-                sm: 2, 
-                lg: 4 
-              }} 
-              gap="lg"
-            >
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {features.map((feature, index) => (
-                <GridItem key={index}>
+                <div key={index}>
                   <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer group">
-                    <CardContent className="p-4 md:p-6 text-center">
-                      <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg mb-3 md:mb-4 mx-auto group-hover:bg-primary/20 transition-colors">
-                        <feature.icon className="h-6 w-6 text-primary" />
+                    <CardContent className="p-2 text-center">
+                      <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-lg mb-1 mx-auto group-hover:bg-primary/20 transition-colors">
+                        <feature.icon className="h-4 w-4 text-primary" />
                       </div>
-                      <h3 className="font-semibold text-sm md:text-base mb-2">
+                      <h3 className="font-semibold text-xs mb-1">
                         {feature.title}
                       </h3>
-                      <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-tight">
                         {feature.description}
                       </p>
                     </CardContent>
                   </Card>
-                </GridItem>
+                </div>
               ))}
-            </Grid>
+            </div>
           </div>
 
           {/* Quick Start Suggestions */}
