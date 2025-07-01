@@ -14,19 +14,19 @@ export function PageLayout({
   footer 
 }: PageLayoutProps) {
   return (
-    <div className={cn("h-full w-full flex flex-col overflow-hidden", className)}>
+    <div className={cn("h-full w-full grid grid-rows-[auto_1fr_auto] overflow-hidden", className)}>
       {header && (
-        <header className="flex-shrink-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           {header}
         </header>
       )}
       
-      <main className="flex-1 min-h-0 overflow-hidden">
+      <main className="overflow-hidden">
         {children}
       </main>
       
       {footer && (
-        <footer className="flex-shrink-0 border-t bg-background">
+        <footer className="border-t bg-background">
           {footer}
         </footer>
       )}
