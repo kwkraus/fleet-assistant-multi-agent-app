@@ -34,7 +34,7 @@ export function ThemeProvider({
     () => (typeof window !== "undefined" && localStorage.getItem(storageKey)) as Theme || defaultTheme
   )
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const root = window.document.documentElement
 
     root.classList.remove("light", "dark")
