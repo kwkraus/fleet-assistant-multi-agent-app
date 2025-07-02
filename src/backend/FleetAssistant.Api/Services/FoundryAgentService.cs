@@ -42,11 +42,11 @@ public class FoundryAgentService : IAgentServiceClient
         {
             ExcludeEnvironmentCredential = false,
             ExcludeManagedIdentityCredential = false,
-            ExcludeSharedTokenCacheCredential = false,
-            ExcludeVisualStudioCredential = false,
-            ExcludeAzureCliCredential = false,
-            ExcludeAzurePowerShellCredential = false,
-            ExcludeInteractiveBrowserCredential = true // Disable for headless scenarios
+            ExcludeSharedTokenCacheCredential = true,
+            ExcludeVisualStudioCredential = true,
+            ExcludeAzureCliCredential = true,
+            ExcludeAzurePowerShellCredential = true,
+            ExcludeInteractiveBrowserCredential = true
         });
 
         _agentClient = new PersistentAgentsClient(endpoint, credential);
@@ -161,7 +161,7 @@ public class FoundryAgentService : IAgentServiceClient
         // Poll the run until completion
         do
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
             var runStatusResponse = await _agentClient.Runs.GetRunAsync(threadId, run.Id, cancellationToken);
             run = runStatusResponse.Value;
         }
@@ -197,7 +197,7 @@ public class FoundryAgentService : IAgentServiceClient
                             }
 
                             yield return word + " ";
-                            await Task.Delay(75, cancellationToken);
+                            await Task.Delay(10, cancellationToken);
                         }
                     }
                 }
@@ -222,7 +222,7 @@ public class FoundryAgentService : IAgentServiceClient
         try
         {
             _logger.LogInformation("Processing request through Azure AI Foundry integration layer");
-            await Task.Delay(500, cancellationToken); // Simulate processing time
+            await Task.Delay(100, cancellationToken); // Simulate processing time
             responsePrefix = "[Azure AI Foundry Connected] ";
             responseContent = GenerateEnhancedFleetResponse(message);
             _logger.LogInformation("Successfully completed Azure AI Foundry agent interaction (fallback mode)");
@@ -241,7 +241,7 @@ public class FoundryAgentService : IAgentServiceClient
         }
 
         var words = responseContent.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var delay = hasError ? 50 : 75;
+        var delay = hasError ? 20 : 10;
 
         foreach (var word in words)
         {

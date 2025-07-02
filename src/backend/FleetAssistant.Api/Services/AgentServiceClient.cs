@@ -35,7 +35,7 @@ public class AgentServiceClient(ILogger<AgentServiceClient> logger, HttpClient h
             }
 
             // Simulate streaming delay
-            await Task.Delay(100, cancellationToken);
+            await Task.Delay(10, cancellationToken);
             yield return word + " ";
         }
     }
