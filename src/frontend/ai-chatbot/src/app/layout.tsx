@@ -34,9 +34,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className="antialiased h-full"
-      >
+      <head>
+        {/* Set initial theme before hydration to avoid flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('fleet-assistant-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body className="antialiased h-full">
         <ThemeProvider
           defaultTheme="system"
           storageKey="fleet-assistant-theme"
