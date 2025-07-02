@@ -3,9 +3,9 @@
 @layer base {
   :root {
     /* Light theme colors */
-    --background: 0 0% 97%;
+    --background: 210 20% 95%;
     --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
+    --card: 210 20% 98%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
@@ -19,7 +19,7 @@
     --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 90%;
+    --border: 214.3 31.8% 88%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
@@ -27,9 +27,9 @@
 
   .dark {
     /* Dark theme colors */
-    --background: 220 5% 10%;
+    --background: 220 7% 12%;
     --foreground: 210 40% 98%;
-    --card: 220 5% 14%;
+    --card: 220 7% 16%;
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
@@ -43,7 +43,7 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 20%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 94.1%;
   }
