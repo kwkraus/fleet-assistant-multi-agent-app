@@ -21,7 +21,7 @@ export function PageLayout({
         </header>
       )}
       
-      <main className="overflow-hidden">
+      <main className="overflow-hidden bg-white dark:bg-background">
         {children}
       </main>
       
