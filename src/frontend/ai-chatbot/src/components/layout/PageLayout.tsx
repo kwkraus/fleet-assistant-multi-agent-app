@@ -16,7 +16,7 @@ export function PageLayout({
   return (
     <div className={cn("h-full w-full grid grid-rows-[auto_1fr_auto] overflow-hidden", className)}>
       {header && (
-        <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="w-full border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           {header}
         </header>
       )}
@@ -26,7 +26,7 @@ export function PageLayout({
       </main>
       
       {footer && (
-        <footer className="border-t bg-background">
+        <footer className="border-t border-border/70 bg-background">
           {footer}
         </footer>
       )}
