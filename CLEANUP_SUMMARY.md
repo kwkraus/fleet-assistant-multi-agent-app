@@ -9,7 +9,7 @@
    - Redundant with the existing chat endpoint
 
 2. **test-foundry-agent.js** (root directory)
-   - Test script specifically for the FleetQuery endpoint
+   - Test script specifically for the FleetQuery endpoint 
    - No longer needed since only chat endpoint remains
 
 ### Endpoints Removed
