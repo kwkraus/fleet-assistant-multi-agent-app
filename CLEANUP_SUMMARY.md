@@ -5,7 +5,7 @@
 ### Files Deleted
 1. **FleetQueryFunction.cs** (`src/backend/FleetAssistant.Api/Functions/FleetQueryFunction.cs`)
    - HTTP endpoint for direct fleet queries (`/api/fleet/query`)
-   - Was not fully implemented (threw NotImplementedException) 
+   - Was not fully implemented (threw NotImplementedException)
    - Redundant with the existing chat endpoint
 
 2. **test-foundry-agent.js** (root directory)
