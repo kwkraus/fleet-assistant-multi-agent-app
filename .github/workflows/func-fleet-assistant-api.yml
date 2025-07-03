@@ -44,6 +44,6 @@ jobs:
         creds: ${{ secrets.func_fleet_assistant_api_SPN }}
     - name: Deploy to Azure Function App
       uses: Azure/functions-action@v1
-      with:
+      with: 
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
         package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
