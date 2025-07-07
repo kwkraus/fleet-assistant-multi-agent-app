@@ -1,0 +1,14 @@
+###
+
+POST https://fleetassistantwebapi-ebdhh8d4akdvg5by.eastus2-01.azurewebsites.net/api/chat
+Content-Type: application/json
+
+{
+    "messages": [
+        {
+            "id": "1",
+            "role": "user",
+            "content": "Hello, how can I assist you today?"
+        }
+    ]
+}

@@ -44,9 +44,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Register HTTP client (needed for AgentServiceClient fallback)
-builder.Services.AddHttpClient();
-
 // Configure FoundryAgentOptions
 builder.Services.Configure<FoundryAgentOptions>(
     builder.Configuration.GetSection(FoundryAgentOptions.SectionName));
