@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FleetAssistant.Api", "Fleet
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.FleetAssistant.Api", "Tests.FleetAssistant.Api\Tests.FleetAssistant.Api.csproj", "{A1B2C3D4-E5F6-7890-ABCD-123456789012}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FleetAssistant.WebApi", "FleetAssistant.WebApi\FleetAssistant.WebApi.csproj", "{E1F2A3B4-C5D6-7890-EFAB-987654321098}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{A1B2C3D4-E5F6-7890-ABCD-123456789012}.Release|x64.Build.0 = Release|Any CPU
 		{A1B2C3D4-E5F6-7890-ABCD-123456789012}.Release|x86.ActiveCfg = Release|Any CPU
 		{A1B2C3D4-E5F6-7890-ABCD-123456789012}.Release|x86.Build.0 = Release|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Debug|x64.Build.0 = Debug|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Debug|x86.Build.0 = Debug|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Release|x64.ActiveCfg = Release|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Release|x64.Build.0 = Release|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Release|x86.ActiveCfg = Release|Any CPU
+		{E1F2A3B4-C5D6-7890-EFAB-987654321098}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

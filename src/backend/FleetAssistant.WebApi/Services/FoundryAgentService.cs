@@ -1,12 +1,10 @@
 using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 using FleetAssistant.Shared.Services;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
-namespace FleetAssistant.Api.Services;
+namespace FleetAssistant.WebApi.Services;
 
 /// <summary>
 /// Azure AI Foundry Agent Service implementation using Azure.AI.Agents.Persistent
@@ -41,11 +39,11 @@ public class FoundryAgentService : IAgentServiceClient
         {
             ExcludeEnvironmentCredential = false,
             ExcludeManagedIdentityCredential = false,
-            ExcludeSharedTokenCacheCredential = true,
-            ExcludeVisualStudioCredential = true,
-            ExcludeAzureCliCredential = true,
-            ExcludeAzurePowerShellCredential = true,
-            ExcludeInteractiveBrowserCredential = true
+            ExcludeSharedTokenCacheCredential = false,
+            ExcludeVisualStudioCredential = false,
+            ExcludeAzureCliCredential = false,
+            ExcludeAzurePowerShellCredential = false,
+            ExcludeInteractiveBrowserCredential = false
         });
 
         _agentClient = new PersistentAgentsClient(endpoint, credential);

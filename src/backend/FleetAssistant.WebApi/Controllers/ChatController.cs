@@ -1,53 +1,55 @@
 using FleetAssistant.Shared.Models;
 using FleetAssistant.Shared.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
 
-namespace FleetAssistant.Api.Functions;
+namespace FleetAssistant.WebApi.Controllers;
 
 /// <summary>
-/// Chat endpoint compatible with Vercel AI SDK for streaming chat responses
+/// Chat API controller for streaming chat responses compatible with Vercel AI SDK
 /// </summary>
-public class ChatFunction(
-    ILogger<ChatFunction> logger,
-    IAgentServiceClient agentServiceClient)
+[ApiController]
+[Route("api/[controller]")]
+[Produces("application/json", "text/event-stream")]
+public class ChatController : ControllerBase
 {
-    private readonly ILogger<ChatFunction> _logger = logger;
-    private readonly IAgentServiceClient _agentServiceClient = agentServiceClient;
+    private readonly ILogger<ChatController> _logger;
+    private readonly IAgentServiceClient _agentServiceClient;
 
-    [Function("Chat")]
-    public async Task<IActionResult> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "chat")] HttpRequest req)
+    public ChatController(
+        ILogger<ChatController> logger,
+        IAgentServiceClient agentServiceClient)
+    {
+        _logger = logger;
+        _agentServiceClient = agentServiceClient;
+    }
+
+    /// <summary>
+    /// Send a chat message and receive a streaming response
+    /// </summary>
+    /// <param name="chatRequest">The chat request containing messages and optional conversation ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Server-Sent Events stream with the agent's response</returns>
+    /// <response code="200">Returns a streaming chat response</response>
+    /// <response code="400">If the request is invalid</response>
+    /// <response code="500">If an internal server error occurs</response>
+    [HttpPost]
+    [ProducesResponseType(typeof(void), 200, "text/event-stream")]
+    [ProducesResponseType(typeof(object), 400)]
+    [ProducesResponseType(typeof(object), 500)]
+    public async Task<IActionResult> SendMessage([FromBody] ChatRequest chatRequest, CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
         _logger.LogInformation("Received chat request. CorrelationId: {CorrelationId}", correlationId);
 
         try
         {
-            // Parse the chat request
-            ChatRequest? chatRequest;
-            try
+            // Validate the chat request
+            if (chatRequest?.Messages == null || chatRequest.Messages.Count == 0)
             {
-                var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-                chatRequest = JsonSerializer.Deserialize<ChatRequest>(requestBody, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-
-                if (chatRequest?.Messages == null || chatRequest.Messages.Count == 0)
-                {
-                    _logger.LogWarning("Invalid chat request - no messages. CorrelationId: {CorrelationId}", correlationId);
-                    return new BadRequestObjectResult(new { error = "Messages array is required" });
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogWarning(ex, "Failed to parse chat request JSON. CorrelationId: {CorrelationId}", correlationId);
-                return new BadRequestObjectResult(new { error = "Invalid JSON format" });
+                _logger.LogWarning("Invalid chat request - no messages. CorrelationId: {CorrelationId}", correlationId);
+                return BadRequest(new { error = "Messages array is required" });
             }
 
             // Get the last user message (most recent)
@@ -58,7 +60,7 @@ public class ChatFunction(
             if (lastUserMessage == null || string.IsNullOrWhiteSpace(lastUserMessage.Content))
             {
                 _logger.LogWarning("No user message found in chat request. CorrelationId: {CorrelationId}", correlationId);
-                return new BadRequestObjectResult(new { error = "At least one user message is required" });
+                return BadRequest(new { error = "At least one user message is required" });
             }
 
             // Extract conversationId
@@ -67,34 +69,29 @@ public class ChatFunction(
             _logger.LogInformation("Processing chat message: {Message}, ConversationId: {ConversationId}, CorrelationId: {CorrelationId}",
                 lastUserMessage.Content, conversationId, correlationId);
 
-            // Set CORS headers for streaming
-            req.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
-            req.HttpContext.Response.Headers.AccessControlAllowMethods = "POST, OPTIONS";
-            req.HttpContext.Response.Headers.AccessControlAllowHeaders = "Content-Type, Authorization";
-
             // Set Server-Sent Events headers
-            req.HttpContext.Response.Headers.ContentType = "text/event-stream";
-            req.HttpContext.Response.Headers.CacheControl = "no-cache";
-            req.HttpContext.Response.Headers.Connection = "keep-alive";
+            Response.Headers.ContentType = "text/event-stream";
+            Response.Headers.CacheControl = "no-cache";
+            Response.Headers.Connection = "keep-alive";
 
             var messageId = Guid.NewGuid().ToString();
 
             try
             {
                 // Send initial metadata event
-                await WriteSSEEvent(req.HttpContext.Response, "metadata", new
+                await WriteSSEEvent("metadata", new
                 {
                     conversationId = conversationId,
                     messageId = messageId,
                     timestamp = DateTime.UtcNow
-                }, req.HttpContext.RequestAborted);
+                }, cancellationToken);
 
                 var contentBuilder = new StringBuilder();
 
                 // Stream chunks as they arrive
-                await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(conversationId, lastUserMessage.Content, req.HttpContext.RequestAborted))
+                await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(conversationId, lastUserMessage.Content, cancellationToken))
                 {
-                    if (req.HttpContext.RequestAborted.IsCancellationRequested)
+                    if (cancellationToken.IsCancellationRequested)
                     {
                         _logger.LogInformation("Chat request cancelled during streaming. CorrelationId: {CorrelationId}", correlationId);
                         break;
@@ -103,19 +100,19 @@ public class ChatFunction(
                     contentBuilder.Append(chunk);
 
                     // Send chunk event
-                    await WriteSSEEvent(req.HttpContext.Response, "chunk", new
+                    await WriteSSEEvent("chunk", new
                     {
                         content = chunk
-                    }, req.HttpContext.RequestAborted);
+                    }, cancellationToken);
                 }
 
                 // Send completion event
-                await WriteSSEEvent(req.HttpContext.Response, "done", new
+                await WriteSSEEvent("done", new
                 {
                     messageId = messageId,
                     totalContent = contentBuilder.ToString().Trim(),
                     timestamp = DateTime.UtcNow
-                }, req.HttpContext.RequestAborted);
+                }, cancellationToken);
 
                 _logger.LogInformation("Successfully completed streaming chat response. ConversationId: {ConversationId}, CorrelationId: {CorrelationId}", conversationId, correlationId);
             }
@@ -124,7 +121,7 @@ public class ChatFunction(
                 _logger.LogError(streamingException, "Error during streaming. CorrelationId: {CorrelationId}", correlationId);
 
                 // Send error event
-                await WriteSSEEvent(req.HttpContext.Response, "error", new
+                await WriteSSEEvent("error", new
                 {
                     message = "An error occurred while streaming the response.",
                     correlationId = correlationId
@@ -141,34 +138,42 @@ public class ChatFunction(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing chat request. CorrelationId: {CorrelationId}", correlationId);
-            return new ObjectResult(new { error = "Internal server error", correlationId })
-            {
-                StatusCode = 500
-            };
+            return StatusCode(500, new { error = "Internal server error", correlationId });
         }
     }
 
     /// <summary>
-    /// Handle CORS preflight requests
+    /// Handle CORS preflight requests for the chat endpoint
     /// </summary>
-    [Function("ChatOptions")]
-    public IActionResult HandleOptions(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "options", Route = "chat")] HttpRequest req)
+    /// <returns>OK response with CORS headers</returns>
+    [HttpOptions]
+    public IActionResult HandleOptions()
     {
         _logger.LogInformation("Handling CORS preflight for chat endpoint");
+        return Ok();
+    }
 
-        req.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
-        req.HttpContext.Response.Headers.AccessControlAllowMethods = "POST, OPTIONS";
-        req.HttpContext.Response.Headers.AccessControlAllowHeaders = "Content-Type, Authorization";
-        req.HttpContext.Response.Headers.AccessControlMaxAge = "86400";
-
-        return new OkResult();
+    /// <summary>
+    /// Get the health status of the chat service
+    /// </summary>
+    /// <returns>Health status information</returns>
+    /// <response code="200">Service is healthy</response>
+    [HttpGet("health")]
+    [ProducesResponseType(typeof(object), 200)]
+    public IActionResult GetHealth()
+    {
+        return Ok(new
+        {
+            status = "healthy",
+            timestamp = DateTime.UtcNow,
+            service = "FleetAssistant.WebApi"
+        });
     }
 
     /// <summary>
     /// Helper method to write Server-Sent Events to the response stream
     /// </summary>
-    private static async Task WriteSSEEvent(HttpResponse response, string eventType, object data, CancellationToken cancellationToken = default)
+    private async Task WriteSSEEvent(string eventType, object data, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -180,8 +185,8 @@ public class ChatFunction(
             var sseData = $"data: {json}\n\n";
             var bytes = Encoding.UTF8.GetBytes(sseData);
 
-            await response.Body.WriteAsync(bytes, cancellationToken);
-            await response.Body.FlushAsync(cancellationToken);
+            await Response.Body.WriteAsync(bytes, cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
         }
         catch (Exception ex) when (ex is OperationCanceledException || cancellationToken.IsCancellationRequested)
         {
