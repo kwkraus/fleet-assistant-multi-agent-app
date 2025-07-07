@@ -69,10 +69,10 @@ public class ChatController : ControllerBase
             _logger.LogInformation("Processing chat message: {Message}, ConversationId: {ConversationId}, CorrelationId: {CorrelationId}",
                 lastUserMessage.Content, conversationId, correlationId);
 
-            // Set Server-Sent Events headers
+            // Set Server-Sent Events headers (HTTP/2 and HTTP/3 compatible)
             Response.Headers.ContentType = "text/event-stream";
             Response.Headers.CacheControl = "no-cache";
-            Response.Headers.Connection = "keep-alive";
+            // Note: Connection header is not needed for HTTP/2+ and causes warnings
 
             var messageId = Guid.NewGuid().ToString();
 

@@ -1,7 +1,12 @@
 using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 using FleetAssistant.Shared.Services;
+using FleetAssistant.WebApi.Options;
+using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+
+// Add this if FoundryAgentOptions is in another namespace
+// using FleetAssistant.WebApi.Options;
 using System.Runtime.CompilerServices;
 
 namespace FleetAssistant.WebApi.Services;
@@ -12,27 +17,26 @@ namespace FleetAssistant.WebApi.Services;
 public class FoundryAgentService : IAgentServiceClient
 {
     private readonly ILogger<FoundryAgentService> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly FoundryAgentOptions _options;
     private readonly PersistentAgentsClient _agentClient;
-    private readonly string _agentId;
 
     // Thread management: conversationId -> threadId mapping
     private readonly ConcurrentDictionary<string, string> _conversationThreadMap;
 
     public FoundryAgentService(
         ILogger<FoundryAgentService> logger,
-        IConfiguration configuration)
+        IOptions<FoundryAgentOptions> options)
     {
         _logger = logger;
-        _configuration = configuration;
+        _options = options.Value;
         _conversationThreadMap = new ConcurrentDictionary<string, string>();
 
-        // Get configuration values
-        var endpoint = _configuration["FoundryAgentService:AgentEndpoint"]
-            ?? throw new InvalidOperationException("FoundryAgentService:AgentEndpoint configuration is required");
+        // Validate required configuration
+        if (string.IsNullOrEmpty(_options.AgentEndpoint))
+            throw new InvalidOperationException("FoundryAgentService:AgentEndpoint configuration is required");
 
-        _agentId = _configuration["FoundryAgentService:AgentId"]
-            ?? throw new InvalidOperationException("FoundryAgentService:AgentId configuration is required");
+        if (string.IsNullOrEmpty(_options.AgentId))
+            throw new InvalidOperationException("FoundryAgentService:AgentId configuration is required");
 
         // Initialize PersistentAgentClient with DefaultAzureCredential
         var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
@@ -46,10 +50,10 @@ public class FoundryAgentService : IAgentServiceClient
             ExcludeInteractiveBrowserCredential = false
         });
 
-        _agentClient = new PersistentAgentsClient(endpoint, credential);
+        _agentClient = new PersistentAgentsClient(_options.AgentEndpoint, credential);
 
         _logger.LogInformation("FoundryAgentService initialized with endpoint: {Endpoint}, AgentId: {AgentId}",
-            endpoint, _agentId);
+            _options.AgentEndpoint, _options.AgentId);
     }
 
     /// <summary>
@@ -151,14 +155,14 @@ public class FoundryAgentService : IAgentServiceClient
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Create a run for the agent on this thread
-        var runResponse = await _agentClient.Runs.CreateRunAsync(threadId, _agentId, cancellationToken: cancellationToken);
+        var runResponse = await _agentClient.Runs.CreateRunAsync(threadId, _options.AgentId, cancellationToken: cancellationToken);
         var run = runResponse.Value;
         _logger.LogDebug("Created run {RunId} for thread {ThreadId}", run.Id, threadId);
 
         // Poll the run until completion
         do
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(_options.RunPollingDelayMs), cancellationToken);
             var runStatusResponse = await _agentClient.Runs.GetRunAsync(threadId, run.Id, cancellationToken);
             run = runStatusResponse.Value;
         }
@@ -194,7 +198,7 @@ public class FoundryAgentService : IAgentServiceClient
                             }
 
                             yield return word + " ";
-                            await Task.Delay(10, cancellationToken);
+                            await Task.Delay(_options.StreamingDelayMs, cancellationToken);
                         }
                     }
                 }
