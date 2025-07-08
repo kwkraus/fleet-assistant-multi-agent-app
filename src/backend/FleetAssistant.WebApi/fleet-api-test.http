@@ -1,0 +1,198 @@
+### Fleet Assistant API Testing
+### This file contains sample HTTP requests for testing the Fleet Assistant API endpoints
+
+@baseUrl = https://localhost:7124/api
+# Alternative for HTTP: @baseUrl = http://localhost:5205/api
+
+### Get all vehicles
+GET {{baseUrl}}/vehicles
+
+### Get specific vehicle
+GET {{baseUrl}}/vehicles/1
+
+### Create new vehicle
+POST {{baseUrl}}/vehicles
+Content-Type: application/json
+
+{
+  "name": "Fleet Vehicle 001",
+  "vin": "1HGBH41JXMN109186",
+  "make": "Honda",
+  "model": "Civic",
+  "year": 2023,
+  "licensePlate": "ABC123",
+  "color": "Silver",
+  "odometerReading": 15000,
+  "status": "Active",
+  "acquisitionDate": "2023-01-15T00:00:00Z",
+  "details": "Company fleet vehicle for sales team"
+}
+
+### Update vehicle
+PUT {{baseUrl}}/vehicles/1
+Content-Type: application/json
+
+{
+  "name": "Updated Fleet Vehicle 001",
+  "odometerReading": 18500,
+  "status": "Active"
+}
+
+### Get vehicle statistics
+GET {{baseUrl}}/vehicles/statistics
+
+### Get all fuel logs
+GET {{baseUrl}}/fuellogs
+
+### Get fuel logs for specific vehicle
+GET {{baseUrl}}/fuellogs/vehicle/1
+
+### Create new fuel log
+POST {{baseUrl}}/fuellogs
+Content-Type: application/json
+
+{
+  "vehicleId": 1,
+  "fuelDate": "2024-01-15T10:30:00Z",
+  "odometerReading": 18500,
+  "gallons": 12.5,
+  "pricePerGallon": 3.45,
+  "totalCost": 43.13,
+  "location": "Shell Station - Main St",
+  "fuelType": "Regular",
+  "notes": "Full tank"
+}
+
+### Get fuel statistics for vehicle
+GET {{baseUrl}}/fuellogs/vehicle/1/statistics
+
+### Get all maintenance records
+GET {{baseUrl}}/maintenance
+
+### Get maintenance records for specific vehicle
+GET {{baseUrl}}/maintenance/vehicle/1
+
+### Get upcoming maintenance
+GET {{baseUrl}}/maintenance/upcoming?daysAhead=30
+
+### Create new maintenance record
+POST {{baseUrl}}/maintenance
+Content-Type: application/json
+
+{
+  "vehicleId": 1,
+  "maintenanceType": "OilChange",
+  "maintenanceDate": "2024-01-10T09:00:00Z",
+  "odometerReading": 18000,
+  "description": "Regular oil change and filter replacement",
+  "cost": 45.99,
+  "serviceProvider": "Quick Lube Express",
+  "serviceProviderContact": "555-123-4567",
+  "invoiceNumber": "QL-2024-001",
+  "warrantyInfo": "90 days or 3,000 miles",
+  "nextMaintenanceDate": "2024-04-10T09:00:00Z",
+  "nextMaintenanceOdometer": 21000,
+  "notes": "Used synthetic oil"
+}
+
+### Get maintenance statistics for vehicle
+GET {{baseUrl}}/maintenance/vehicle/1/statistics
+
+### Get all insurance policies
+GET {{baseUrl}}/insurance
+
+### Get insurance policies for specific vehicle
+GET {{baseUrl}}/insurance/vehicle/1
+
+### Create new insurance policy
+POST {{baseUrl}}/insurance
+Content-Type: application/json
+
+{
+  "policyNumber": "POL-2024-001",
+  "providerName": "State Farm Insurance",
+  "providerContact": "agent@statefarm.com, 555-987-6543",
+  "startDate": "2024-01-01T00:00:00Z",
+  "endDate": "2024-12-31T23:59:59Z",
+  "premiumAmount": 1200.00,
+  "paymentFrequency": "Monthly",
+  "deductible": 500.00,
+  "coverageLimit": 1000000.00,
+  "coverageType": "Comprehensive",
+  "coverageDetails": "Full coverage including collision, comprehensive, and liability",
+  "notes": "Fleet policy covering multiple vehicles",
+  "vehicleIds": [1]
+}
+
+### Add vehicle to insurance policy
+POST {{baseUrl}}/insurance/1/vehicles
+Content-Type: application/json
+
+{
+  "vehicleId": 2,
+  "startDate": "2024-01-15T00:00:00Z"
+}
+
+### Get insurance statistics
+GET {{baseUrl}}/insurance/statistics
+
+### Get all financial records
+GET {{baseUrl}}/financials
+
+### Get financial records for specific vehicle
+GET {{baseUrl}}/financials/vehicle/1
+
+### Get upcoming payments
+GET {{baseUrl}}/financials/upcoming-payments?daysAhead=30
+
+### Create new financial record
+POST {{baseUrl}}/financials
+Content-Type: application/json
+
+{
+  "vehicleId": 1,
+  "financialType": "Lease",
+  "amount": 450.00,
+  "paymentFrequency": "Monthly",
+  "startDate": "2023-01-15T00:00:00Z",
+  "endDate": "2026-01-14T23:59:59Z",
+  "nextPaymentDate": "2024-02-15T00:00:00Z",
+  "providerName": "Honda Financial Services",
+  "accountNumber": "HFS-123456789",
+  "interestRate": 3.9,
+  "remainingBalance": 18500.00,
+  "purchasePrice": 25000.00,
+  "currentValue": 22000.00,
+  "depreciationMethod": "StraightLine",
+  "depreciationRate": 15.0,
+  "notes": "36-month lease agreement"
+}
+
+### Get financial statistics for vehicle
+GET {{baseUrl}}/financials/vehicle/1/statistics
+
+### Calculate depreciation for vehicle
+GET {{baseUrl}}/financials/vehicle/1/depreciation
+
+### Get fleet financial summary
+GET {{baseUrl}}/financials/fleet-summary
+
+### Test filtering examples
+
+### Get vehicles by status
+GET {{baseUrl}}/vehicles?status=Active
+
+### Get vehicles by make and year
+GET {{baseUrl}}/vehicles?make=Honda&year=2023
+
+### Get fuel logs by date range
+GET {{baseUrl}}/fuellogs?startDate=2024-01-01&endDate=2024-01-31
+
+### Get maintenance records by type
+GET {{baseUrl}}/maintenance?maintenanceType=OilChange
+
+### Get active insurance policies
+GET {{baseUrl}}/insurance?isActive=true
+
+### Get financial records by type
+GET {{baseUrl}}/financials?financialType=Lease
