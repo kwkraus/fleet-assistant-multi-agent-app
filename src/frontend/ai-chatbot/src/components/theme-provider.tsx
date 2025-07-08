@@ -31,7 +31,15 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(
-    () => (typeof window !== "undefined" && localStorage.getItem(storageKey)) as Theme || defaultTheme
+    () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem(storageKey) as Theme
+        if (stored === "light" || stored === "dark") {
+          return stored
+        }
+      }
+      return defaultTheme
+    }
   )
 
   React.useEffect(() => {
