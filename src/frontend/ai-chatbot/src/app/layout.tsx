@@ -38,7 +38,7 @@ export default function RootLayout({
         className="antialiased h-full"
       >
         <ThemeProvider
-          defaultTheme="system"
+          defaultTheme="light"
           storageKey="fleet-assistant-theme"
         >
           {children}

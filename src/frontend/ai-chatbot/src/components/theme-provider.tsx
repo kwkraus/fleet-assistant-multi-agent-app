@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-type Theme = "dark" | "light" | "system"
+type Theme = "dark" | "light"
 
 type ThemeProviderProps = {
   children: React.ReactNode
@@ -18,7 +18,7 @@ type ThemeProviderState = {
 }
 
 const initialState: ThemeProviderState = {
-  theme: "system",
+  theme: "light",
   setTheme: () => null,
 }
 
@@ -26,29 +26,26 @@ const ThemeProviderContext = React.createContext<ThemeProviderState>(initialStat
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "light",
   storageKey = "fleet-assistant-theme",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(
-    () => (typeof window !== "undefined" && localStorage.getItem(storageKey)) as Theme || defaultTheme
+    () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem(storageKey) as Theme
+        if (stored === "light" || stored === "dark") {
+          return stored
+        }
+      }
+      return defaultTheme
+    }
   )
 
   React.useEffect(() => {
     const root = window.document.documentElement
 
     root.classList.remove("light", "dark")
-
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-
-      root.classList.add(systemTheme)
-      return
-    }
-
     root.classList.add(theme)
   }, [theme])
 
