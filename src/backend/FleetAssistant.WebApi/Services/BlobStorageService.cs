@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using FleetAssistant.WebApi.Options;
 using Microsoft.Extensions.Options;
 
 namespace FleetAssistant.WebApi.Services;
@@ -7,23 +8,16 @@ namespace FleetAssistant.WebApi.Services;
 /// <summary>
 /// Implementation of blob storage service using Azure Blob Storage
 /// </summary>
-public class BlobStorageService : IBlobStorageService
+public class BlobStorageService(
+    BlobServiceClient blobServiceClient,
+    IOptions<BlobStorageOptions> options,
+    ILogger<BlobStorageService> logger) : IStorageService
 {
-    private readonly BlobServiceClient _blobServiceClient;
-    private readonly BlobStorageOptions _options;
-    private readonly ILogger<BlobStorageService> _logger;
+    private readonly BlobServiceClient _blobServiceClient = blobServiceClient;
+    private readonly BlobStorageOptions _options = options.Value;
+    private readonly ILogger<BlobStorageService> _logger = logger;
 
-    public BlobStorageService(
-        BlobServiceClient blobServiceClient,
-        IOptions<BlobStorageOptions> options,
-        ILogger<BlobStorageService> logger)
-    {
-        _blobServiceClient = blobServiceClient;
-        _options = options.Value;
-        _logger = logger;
-    }
-
-    public async Task<BlobStorageResult> UploadFileAsync(IFormFile file, string? containerName = null, string? blobName = null)
+    public async Task<StorageResult> UploadFileAsync(IFormFile file, string? containerName = null, string? blobName = null)
     {
         try
         {
@@ -61,34 +55,34 @@ public class BlobStorageService : IBlobStorageService
             _logger.LogInformation("Successfully uploaded file {FileName} to blob {BlobName} in container {ContainerName}",
                 file.FileName, blobName, containerName);
 
-            return BlobStorageResult.SuccessResult(blobUrl, blobName, containerName, file.Length, GetContentType(file.FileName));
+            return StorageResult.SuccessResult(blobUrl, blobName, containerName, file.Length, GetContentType(file.FileName));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error uploading file {FileName} to blob storage", file.FileName);
-            return BlobStorageResult.ErrorResult($"Upload failed: {ex.Message}");
+            return StorageResult.ErrorResult($"Upload failed: {ex.Message}");
         }
     }
 
-    public async Task<BlobStorageResult> UploadStreamAsync(Stream stream, string fileName, string? containerName = null, string? blobName = null)
+    public async Task<StorageResult> UploadStreamAsync(Stream stream, string fileName, string? containerName = null, string? blobName = null)
     {
         try
         {
             // Validate stream
             if (stream == null || stream.Length == 0)
             {
-                return BlobStorageResult.ErrorResult("Stream is null or empty");
+                return StorageResult.ErrorResult("Stream is null or empty");
             }
 
             if (stream.Length > _options.MaxFileSizeBytes)
             {
-                return BlobStorageResult.ErrorResult($"File size exceeds maximum allowed size of {_options.MaxFileSizeBytes / (1024 * 1024)} MB");
+                return StorageResult.ErrorResult($"File size exceeds maximum allowed size of {_options.MaxFileSizeBytes / (1024 * 1024)} MB");
             }
 
             var extension = Path.GetExtension(fileName);
             if (!_options.AllowedExtensions.Contains(extension.ToLowerInvariant()))
             {
-                return BlobStorageResult.ErrorResult($"File extension {extension} is not allowed");
+                return StorageResult.ErrorResult($"File extension {extension} is not allowed");
             }
 
             containerName ??= _options.DefaultContainer;
@@ -117,12 +111,12 @@ public class BlobStorageService : IBlobStorageService
             _logger.LogInformation("Successfully uploaded stream for file {FileName} to blob {BlobName} in container {ContainerName}",
                 fileName, blobName, containerName);
 
-            return BlobStorageResult.SuccessResult(blobUrl, blobName, containerName, stream.Length, GetContentType(fileName));
+            return StorageResult.SuccessResult(blobUrl, blobName, containerName, stream.Length, GetContentType(fileName));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error uploading stream for file {FileName} to blob storage", fileName);
-            return BlobStorageResult.ErrorResult($"Upload failed: {ex.Message}");
+            return StorageResult.ErrorResult($"Upload failed: {ex.Message}");
         }
     }
 
@@ -212,7 +206,7 @@ public class BlobStorageService : IBlobStorageService
             if (!await containerClient.ExistsAsync())
             {
                 _logger.LogWarning("Container {ContainerName} does not exist", containerName);
-                return Enumerable.Empty<string>();
+                return [];
             }
 
             var blobNames = new List<string>();
@@ -231,7 +225,7 @@ public class BlobStorageService : IBlobStorageService
         {
             _logger.LogError(ex, "Error listing blobs from container {ContainerName} with prefix {Prefix}",
                 containerName, prefix ?? "none");
-            return Enumerable.Empty<string>();
+            return [];
         }
     }
 
@@ -257,25 +251,25 @@ public class BlobStorageService : IBlobStorageService
         }
     }
 
-    private BlobStorageResult ValidateFile(IFormFile file)
+    private StorageResult ValidateFile(IFormFile file)
     {
         if (file == null || file.Length == 0)
         {
-            return BlobStorageResult.ErrorResult("File is null or empty");
+            return StorageResult.ErrorResult("File is null or empty");
         }
 
         if (file.Length > _options.MaxFileSizeBytes)
         {
-            return BlobStorageResult.ErrorResult($"File size exceeds maximum allowed size of {_options.MaxFileSizeBytes / (1024 * 1024)} MB");
+            return StorageResult.ErrorResult($"File size exceeds maximum allowed size of {_options.MaxFileSizeBytes / (1024 * 1024)} MB");
         }
 
         var extension = Path.GetExtension(file.FileName);
         if (string.IsNullOrEmpty(extension) || !_options.AllowedExtensions.Contains(extension.ToLowerInvariant()))
         {
-            return BlobStorageResult.ErrorResult($"File extension {extension} is not allowed. Allowed extensions: {string.Join(", ", _options.AllowedExtensions)}");
+            return StorageResult.ErrorResult($"File extension {extension} is not allowed. Allowed extensions: {string.Join(", ", _options.AllowedExtensions)}");
         }
 
-        return BlobStorageResult.SuccessResult("", "", "", file.Length, GetContentType(file.FileName));
+        return StorageResult.SuccessResult("", "", "", file.Length, GetContentType(file.FileName));
     }
 
     private static string GenerateUniqueBlobName(string originalFileName)

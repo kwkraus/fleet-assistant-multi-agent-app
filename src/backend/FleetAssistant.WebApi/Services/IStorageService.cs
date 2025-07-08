@@ -3,7 +3,7 @@ namespace FleetAssistant.WebApi.Services;
 /// <summary>
 /// Represents the result of a blob storage operation
 /// </summary>
-public class BlobStorageResult
+public class StorageResult
 {
     public bool Success { get; set; }
     public string? BlobUrl { get; set; }
@@ -13,9 +13,9 @@ public class BlobStorageResult
     public long? FileSizeBytes { get; set; }
     public string? ContentType { get; set; }
 
-    public static BlobStorageResult SuccessResult(string blobUrl, string blobName, string containerName, long fileSizeBytes, string contentType)
+    public static StorageResult SuccessResult(string blobUrl, string blobName, string containerName, long fileSizeBytes, string contentType)
     {
-        return new BlobStorageResult
+        return new StorageResult
         {
             Success = true,
             BlobUrl = blobUrl,
@@ -26,9 +26,9 @@ public class BlobStorageResult
         };
     }
 
-    public static BlobStorageResult ErrorResult(string errorMessage)
+    public static StorageResult ErrorResult(string errorMessage)
     {
-        return new BlobStorageResult
+        return new StorageResult
         {
             Success = false,
             ErrorMessage = errorMessage
@@ -39,7 +39,7 @@ public class BlobStorageResult
 /// <summary>
 /// Interface for blob storage operations
 /// </summary>
-public interface IBlobStorageService
+public interface IStorageService
 {
     /// <summary>
     /// Uploads a file to blob storage
@@ -48,7 +48,7 @@ public interface IBlobStorageService
     /// <param name="containerName">Optional container name (uses default if not specified)</param>
     /// <param name="blobName">Optional blob name (generates unique name if not specified)</param>
     /// <returns>Result of the upload operation</returns>
-    Task<BlobStorageResult> UploadFileAsync(IFormFile file, string? containerName = null, string? blobName = null);
+    Task<StorageResult> UploadFileAsync(IFormFile file, string? containerName = null, string? blobName = null);
 
     /// <summary>
     /// Uploads a stream to blob storage
@@ -58,7 +58,7 @@ public interface IBlobStorageService
     /// <param name="containerName">Optional container name (uses default if not specified)</param>
     /// <param name="blobName">Optional blob name (generates unique name if not specified)</param>
     /// <returns>Result of the upload operation</returns>
-    Task<BlobStorageResult> UploadStreamAsync(Stream stream, string fileName, string? containerName = null, string? blobName = null);
+    Task<StorageResult> UploadStreamAsync(Stream stream, string fileName, string? containerName = null, string? blobName = null);
 
     /// <summary>
     /// Downloads a file from blob storage

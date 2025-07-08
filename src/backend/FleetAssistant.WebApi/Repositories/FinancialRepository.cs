@@ -50,7 +50,7 @@ public class FinancialRepository(FleetAssistantDbContext context, ILogger<Financ
             else
             {
                 // Return empty list if type doesn't match any enum value
-                return new List<VehicleFinancial>();
+                return [];
             }
         }
         catch (Exception ex)
@@ -101,7 +101,7 @@ public class FinancialRepository(FleetAssistantDbContext context, ILogger<Financ
             else
             {
                 // Return empty list if category doesn't match any enum value
-                return new List<VehicleFinancial>();
+                return [];
             }
         }
         catch (Exception ex)
@@ -119,7 +119,7 @@ public class FinancialRepository(FleetAssistantDbContext context, ILogger<Financ
                 .Where(f => f.VehicleId == vehicleId)
                 .ToListAsync();
 
-            if (!financialRecords.Any())
+            if (financialRecords.Count == 0)
             {
                 return new
                 {
@@ -228,8 +228,8 @@ public class FinancialRepository(FleetAssistantDbContext context, ILogger<Financ
                 .GroupBy(f => new { f.StartDate.Year, f.StartDate.Month })
                 .Select(g => new
                 {
-                    Year = g.Key.Year,
-                    Month = g.Key.Month,
+                    g.Key.Year,
+                    g.Key.Month,
                     TotalCosts = g.Sum(f => f.Amount),
                     PaymentCount = g.Count()
                 })

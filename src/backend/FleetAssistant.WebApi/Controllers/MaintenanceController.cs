@@ -16,13 +16,13 @@ public class MaintenanceController : ControllerBase
 {
     private readonly IMaintenanceRepository _maintenanceRepository;
     private readonly IVehicleRepository _vehicleRepository;
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IStorageService _blobStorageService;
     private readonly ILogger<MaintenanceController> _logger;
 
     public MaintenanceController(
         IMaintenanceRepository maintenanceRepository,
         IVehicleRepository vehicleRepository,
-        IBlobStorageService blobStorageService,
+        IStorageService blobStorageService,
         ILogger<MaintenanceController> logger)
     {
         _maintenanceRepository = maintenanceRepository;

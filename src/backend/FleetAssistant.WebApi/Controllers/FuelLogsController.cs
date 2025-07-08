@@ -16,13 +16,13 @@ public class FuelLogsController : ControllerBase
 {
     private readonly IFuelLogRepository _fuelLogRepository;
     private readonly IVehicleRepository _vehicleRepository;
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IStorageService _blobStorageService;
     private readonly ILogger<FuelLogsController> _logger;
 
     public FuelLogsController(
         IFuelLogRepository fuelLogRepository,
         IVehicleRepository vehicleRepository,
-        IBlobStorageService blobStorageService,
+        IStorageService blobStorageService,
         ILogger<FuelLogsController> logger)
     {
         _fuelLogRepository = fuelLogRepository;

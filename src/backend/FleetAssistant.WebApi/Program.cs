@@ -45,7 +45,7 @@ builder.Services.AddSingleton(provider =>
     var blobStorageOptions = builder.Configuration.GetSection(BlobStorageOptions.SectionName).Get<BlobStorageOptions>();
     return new BlobServiceClient(blobStorageOptions?.ConnectionString ?? "UseDevelopmentStorage=true");
 });
-builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<IStorageService, BlobStorageService>();
 
 // Add Application Insights
 builder.Services.AddApplicationInsightsTelemetry();

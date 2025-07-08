@@ -15,12 +15,12 @@ namespace FleetAssistant.WebApi.Controllers;
 public class VehiclesController : ControllerBase
 {
     private readonly IVehicleRepository _vehicleRepository;
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IStorageService _blobStorageService;
     private readonly ILogger<VehiclesController> _logger;
 
     public VehiclesController(
         IVehicleRepository vehicleRepository,
-        IBlobStorageService blobStorageService,
+        IStorageService blobStorageService,
         ILogger<VehiclesController> logger)
     {
         _vehicleRepository = vehicleRepository;

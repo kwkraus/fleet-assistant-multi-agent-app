@@ -50,7 +50,7 @@ public class MaintenanceRepository(FleetAssistantDbContext context, ILogger<Main
             else
             {
                 // Return empty list if type doesn't match any enum value
-                return new List<MaintenanceRecord>();
+                return [];
             }
         }
         catch (Exception ex)
@@ -135,7 +135,7 @@ public class MaintenanceRepository(FleetAssistantDbContext context, ILogger<Main
                 .Where(m => m.VehicleId == vehicleId)
                 .ToListAsync();
 
-            if (!maintenanceRecords.Any())
+            if (maintenanceRecords.Count == 0)
             {
                 return new
                 {

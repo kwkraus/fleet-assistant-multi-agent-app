@@ -134,7 +134,7 @@ public class InsuranceRepository(FleetAssistantDbContext context, ILogger<Insura
             else
             {
                 // Return empty list if coverage type doesn't match any enum value
-                return new List<InsurancePolicy>();
+                return [];
             }
         }
         catch (Exception ex)

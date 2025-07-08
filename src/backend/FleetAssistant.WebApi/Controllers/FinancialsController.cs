@@ -16,13 +16,13 @@ public class FinancialsController : ControllerBase
 {
     private readonly IFinancialRepository _financialRepository;
     private readonly IVehicleRepository _vehicleRepository;
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IStorageService _blobStorageService;
     private readonly ILogger<FinancialsController> _logger;
 
     public FinancialsController(
         IFinancialRepository financialRepository,
         IVehicleRepository vehicleRepository,
-        IBlobStorageService blobStorageService,
+        IStorageService blobStorageService,
         ILogger<FinancialsController> logger)
     {
         _financialRepository = financialRepository;

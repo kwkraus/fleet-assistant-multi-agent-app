@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FleetAssistant.WebApi.Services;
+namespace FleetAssistant.WebApi.Options;
 
 /// <summary>
 /// Options for configuring Azure Blob Storage

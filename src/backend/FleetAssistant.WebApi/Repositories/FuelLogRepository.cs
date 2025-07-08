@@ -7,7 +7,9 @@ namespace FleetAssistant.WebApi.Repositories;
 /// <summary>
 /// Repository implementation for FuelLog operations
 /// </summary>
-public class FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogRepository> logger) : Repository<FuelLog>(context, logger), IFuelLogRepository
+public class FuelLogRepository(
+    FleetAssistantDbContext context, 
+    ILogger<FuelLogRepository> logger) : Repository<FuelLog>(context, logger), IFuelLogRepository
 {
     public async Task<IEnumerable<FuelLog>> GetByVehicleIdAsync(int vehicleId, int page = 1, int pageSize = 20)
     {
@@ -76,7 +78,7 @@ public class FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogR
 
             var fuelLogs = await query.OrderBy(f => f.FuelDate).ToListAsync();
 
-            if (!fuelLogs.Any())
+            if (fuelLogs.Count == 0)
             {
                 return new
                 {
@@ -97,9 +99,9 @@ public class FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogR
             var averagePricePerGallon = totalGallons > 0 ? totalCost / totalGallons : 0;
 
             var logsWithEfficiency = fuelLogs.Where(f => f.MilesPerGallon.HasValue).ToList();
-            var averageEfficiency = logsWithEfficiency.Any() ? logsWithEfficiency.Average(f => f.MilesPerGallon!.Value) : 0;
-            var bestEfficiency = logsWithEfficiency.Any() ? logsWithEfficiency.Max(f => f.MilesPerGallon!.Value) : 0;
-            var worstEfficiency = logsWithEfficiency.Any() ? logsWithEfficiency.Min(f => f.MilesPerGallon!.Value) : 0;
+            var averageEfficiency = logsWithEfficiency.Count != 0 ? logsWithEfficiency.Average(f => f.MilesPerGallon!.Value) : 0;
+            var bestEfficiency = logsWithEfficiency.Count != 0 ? logsWithEfficiency.Max(f => f.MilesPerGallon!.Value) : 0;
+            var worstEfficiency = logsWithEfficiency.Count != 0 ? logsWithEfficiency.Min(f => f.MilesPerGallon!.Value) : 0;
 
             // Simple trend analysis - compare last 3 vs previous 3 logs
             var recentLogs = logsWithEfficiency.TakeLast(3).ToList();
@@ -206,8 +208,8 @@ public class FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogR
                 .GroupBy(f => new { f.FuelDate.Year, f.FuelDate.Month })
                 .Select(g => new
                 {
-                    Year = g.Key.Year,
-                    Month = g.Key.Month,
+                    g.Key.Year,
+                    g.Key.Month,
                     AverageEfficiency = g.Average(f => f.MilesPerGallon!.Value),
                     BestEfficiency = g.Max(f => f.MilesPerGallon!.Value),
                     WorstEfficiency = g.Min(f => f.MilesPerGallon!.Value),

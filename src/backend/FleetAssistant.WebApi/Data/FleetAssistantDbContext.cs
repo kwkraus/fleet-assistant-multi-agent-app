@@ -6,12 +6,8 @@ namespace FleetAssistant.WebApi.Data;
 /// <summary>
 /// Entity Framework database context for Fleet Assistant application
 /// </summary>
-public class FleetAssistantDbContext : DbContext
+public class FleetAssistantDbContext(DbContextOptions<FleetAssistantDbContext> options) : DbContext(options)
 {
-    public FleetAssistantDbContext(DbContextOptions<FleetAssistantDbContext> options)
-        : base(options)
-    {
-    }
 
     // DbSet properties for each entity
     public DbSet<Vehicle> Vehicles { get; set; } = null!;

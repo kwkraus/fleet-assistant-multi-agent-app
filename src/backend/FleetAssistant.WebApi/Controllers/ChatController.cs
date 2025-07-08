@@ -12,18 +12,12 @@ namespace FleetAssistant.WebApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json", "text/event-stream")]
-public class ChatController : ControllerBase
+public class ChatController(
+    ILogger<ChatController> logger,
+    IAgentServiceClient agentServiceClient) : ControllerBase
 {
-    private readonly ILogger<ChatController> _logger;
-    private readonly IAgentServiceClient _agentServiceClient;
-
-    public ChatController(
-        ILogger<ChatController> logger,
-        IAgentServiceClient agentServiceClient)
-    {
-        _logger = logger;
-        _agentServiceClient = agentServiceClient;
-    }
+    private readonly ILogger<ChatController> _logger = logger;
+    private readonly IAgentServiceClient _agentServiceClient = agentServiceClient;
 
     /// <summary>
     /// Send a chat message and receive a streaming response
@@ -81,8 +75,8 @@ public class ChatController : ControllerBase
                 // Send initial metadata event
                 await WriteSSEEvent("metadata", new
                 {
-                    conversationId = conversationId,
-                    messageId = messageId,
+                    conversationId,
+                    messageId,
                     timestamp = DateTime.UtcNow
                 }, cancellationToken);
 
@@ -109,7 +103,7 @@ public class ChatController : ControllerBase
                 // Send completion event
                 await WriteSSEEvent("done", new
                 {
-                    messageId = messageId,
+                    messageId,
                     totalContent = contentBuilder.ToString().Trim(),
                     timestamp = DateTime.UtcNow
                 }, cancellationToken);
@@ -124,7 +118,7 @@ public class ChatController : ControllerBase
                 await WriteSSEEvent("error", new
                 {
                     message = "An error occurred while streaming the response.",
-                    correlationId = correlationId
+                    correlationId
                 }, CancellationToken.None);
             }
 

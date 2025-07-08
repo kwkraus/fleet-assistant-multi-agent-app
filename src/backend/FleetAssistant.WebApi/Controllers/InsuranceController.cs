@@ -16,13 +16,13 @@ public class InsuranceController : ControllerBase
 {
     private readonly IInsuranceRepository _insuranceRepository;
     private readonly IVehicleRepository _vehicleRepository;
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IStorageService _blobStorageService;
     private readonly ILogger<InsuranceController> _logger;
 
     public InsuranceController(
         IInsuranceRepository insuranceRepository,
         IVehicleRepository vehicleRepository,
-        IBlobStorageService blobStorageService,
+        IStorageService blobStorageService,
         ILogger<InsuranceController> logger)
     {
         _insuranceRepository = insuranceRepository;

@@ -11,11 +11,11 @@ namespace FleetAssistant.WebApi.Controllers;
 [Produces("application/json")]
 public class DocumentsController : ControllerBase
 {
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IStorageService _blobStorageService;
     private readonly ILogger<DocumentsController> _logger;
 
     public DocumentsController(
-        IBlobStorageService blobStorageService,
+        IStorageService blobStorageService,
         ILogger<DocumentsController> logger)
     {
         _blobStorageService = blobStorageService;
