@@ -86,7 +86,7 @@ public class MaintenanceController : ControllerBase
             // Apply additional filtering if needed
             if (!string.IsNullOrEmpty(serviceProvider))
             {
-                records = records.Where(r => r.ServiceProvider != null && 
+                records = records.Where(r => r.ServiceProvider != null &&
                     r.ServiceProvider.Contains(serviceProvider, StringComparison.OrdinalIgnoreCase));
             }
 
@@ -197,7 +197,7 @@ public class MaintenanceController : ControllerBase
             }
 
             var upcomingRecords = await _maintenanceRepository.GetUpcomingMaintenanceAsync();
-            
+
             // Filter by vehicle if specified
             if (vehicleId.HasValue)
             {
@@ -206,8 +206,8 @@ public class MaintenanceController : ControllerBase
 
             // Filter by days ahead
             var targetDate = DateTime.UtcNow.Date.AddDays(daysAhead);
-            upcomingRecords = upcomingRecords.Where(r => 
-                r.NextMaintenanceDate.HasValue && 
+            upcomingRecords = upcomingRecords.Where(r =>
+                r.NextMaintenanceDate.HasValue &&
                 r.NextMaintenanceDate.Value.Date <= targetDate);
 
             var upcomingMaintenance = upcomingRecords.Select(r => new
@@ -220,7 +220,7 @@ public class MaintenanceController : ControllerBase
                 NextMaintenanceDate = r.NextMaintenanceDate,
                 NextMaintenanceOdometer = r.NextMaintenanceOdometer,
                 r.ServiceProvider,
-                DaysUntilDue = r.NextMaintenanceDate.HasValue ? 
+                DaysUntilDue = r.NextMaintenanceDate.HasValue ?
                     (r.NextMaintenanceDate.Value.Date - DateTime.UtcNow.Date).Days : 0
             });
 
@@ -480,40 +480,40 @@ public class MaintenanceController : ControllerBase
     {
         if (dto.MaintenanceType.HasValue)
             record.MaintenanceType = dto.MaintenanceType.Value;
-        
+
         if (dto.MaintenanceDate.HasValue)
             record.MaintenanceDate = dto.MaintenanceDate.Value;
-        
+
         if (dto.OdometerReading.HasValue)
             record.OdometerReading = dto.OdometerReading.Value;
-        
+
         if (!string.IsNullOrEmpty(dto.Description))
             record.Description = dto.Description;
-        
+
         if (dto.Cost.HasValue)
             record.Cost = dto.Cost.Value;
-        
+
         if (dto.ServiceProvider != null)
             record.ServiceProvider = dto.ServiceProvider;
-        
+
         if (dto.ServiceProviderContact != null)
             record.ServiceProviderContact = dto.ServiceProviderContact;
-        
+
         if (dto.InvoiceNumber != null)
             record.InvoiceNumber = dto.InvoiceNumber;
-        
+
         if (dto.WarrantyInfo != null)
             record.WarrantyInfo = dto.WarrantyInfo;
-        
+
         if (dto.NextMaintenanceDate.HasValue)
             record.NextMaintenanceDate = dto.NextMaintenanceDate;
-        
+
         if (dto.NextMaintenanceOdometer.HasValue)
             record.NextMaintenanceOdometer = dto.NextMaintenanceOdometer;
-        
+
         if (dto.Notes != null)
             record.Notes = dto.Notes;
-        
+
         record.UpdatedAt = DateTime.UtcNow;
     }
 }

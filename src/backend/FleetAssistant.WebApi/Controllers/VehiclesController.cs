@@ -209,7 +209,7 @@ public class VehiclesController : ControllerBase
             }
 
             // Check VIN uniqueness if VIN is being updated
-            if (!string.IsNullOrEmpty(updateVehicleDto.Vin) && 
+            if (!string.IsNullOrEmpty(updateVehicleDto.Vin) &&
                 updateVehicleDto.Vin != existingVehicle.Vin &&
                 await _vehicleRepository.VinExistsAsync(updateVehicleDto.Vin, id))
             {
@@ -345,37 +345,37 @@ public class VehiclesController : ControllerBase
     {
         if (!string.IsNullOrEmpty(dto.Name))
             vehicle.Name = dto.Name;
-        
+
         if (!string.IsNullOrEmpty(dto.Vin))
             vehicle.Vin = dto.Vin;
-        
+
         if (!string.IsNullOrEmpty(dto.Make))
             vehicle.Make = dto.Make;
-        
+
         if (!string.IsNullOrEmpty(dto.Model))
             vehicle.Model = dto.Model;
-        
+
         if (dto.Year.HasValue)
             vehicle.Year = dto.Year.Value;
-        
+
         if (dto.LicensePlate != null)
             vehicle.LicensePlate = dto.LicensePlate;
-        
+
         if (dto.Color != null)
             vehicle.Color = dto.Color;
-        
+
         if (dto.OdometerReading.HasValue)
             vehicle.OdometerReading = dto.OdometerReading.Value;
-        
+
         if (dto.Status.HasValue)
             vehicle.Status = dto.Status.Value;
-        
+
         if (dto.AcquisitionDate.HasValue)
             vehicle.AcquisitionDate = dto.AcquisitionDate;
-        
+
         if (dto.Details != null)
             vehicle.Details = dto.Details;
-        
+
         vehicle.UpdatedAt = DateTime.UtcNow;
     }
 }

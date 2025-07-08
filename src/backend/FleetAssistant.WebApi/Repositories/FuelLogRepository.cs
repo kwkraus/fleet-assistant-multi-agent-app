@@ -31,10 +31,10 @@ public class FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogR
     }
 
     public async Task<IEnumerable<FuelLog>> GetByDateRangeAsync(
-        DateTime startDate, 
-        DateTime endDate, 
+        DateTime startDate,
+        DateTime endDate,
         int? vehicleId = null,
-        int page = 1, 
+        int page = 1,
         int pageSize = 20)
     {
         try
@@ -163,7 +163,7 @@ public class FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogR
                 // Existing entity - update it
                 _dbSet.Update(fuelLog);
             }
-            
+
             await _context.SaveChangesAsync();
 
             return fuelLog;

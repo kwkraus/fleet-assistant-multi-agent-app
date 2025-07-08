@@ -159,7 +159,7 @@ public class InsuranceController : ControllerBase
 
             var policy = MapFromCreateDto(createInsurancePolicyDto);
             var createdPolicy = await _insuranceRepository.AddAsync(policy);
-            
+
             var createdPolicyDto = MapToDto(createdPolicy);
             return CreatedAtAction(nameof(GetInsurancePolicy), new { id = createdPolicyDto.Id }, createdPolicyDto);
         }
@@ -500,43 +500,43 @@ public class InsuranceController : ControllerBase
     {
         if (!string.IsNullOrEmpty(dto.PolicyNumber))
             policy.PolicyNumber = dto.PolicyNumber;
-        
+
         if (!string.IsNullOrEmpty(dto.ProviderName))
             policy.ProviderName = dto.ProviderName;
-        
+
         if (dto.ProviderContact != null)
             policy.ProviderContact = dto.ProviderContact;
-        
+
         if (dto.StartDate.HasValue)
             policy.StartDate = dto.StartDate.Value;
-        
+
         if (dto.EndDate.HasValue)
             policy.EndDate = dto.EndDate.Value;
-        
+
         if (dto.PremiumAmount.HasValue)
             policy.PremiumAmount = dto.PremiumAmount.Value;
-        
+
         if (dto.PaymentFrequency.HasValue)
             policy.PaymentFrequency = dto.PaymentFrequency.Value;
-        
+
         if (dto.Deductible.HasValue)
             policy.Deductible = dto.Deductible.Value;
-        
+
         if (dto.CoverageLimit.HasValue)
             policy.CoverageLimit = dto.CoverageLimit.Value;
-        
+
         if (dto.CoverageType.HasValue)
             policy.CoverageType = dto.CoverageType.Value;
-        
+
         if (dto.CoverageDetails != null)
             policy.CoverageDetails = dto.CoverageDetails;
-        
+
         if (dto.PolicyDocumentUrl != null)
             policy.PolicyDocumentUrl = dto.PolicyDocumentUrl;
-        
+
         if (dto.Notes != null)
             policy.Notes = dto.Notes;
-        
+
         policy.UpdatedAt = DateTime.UtcNow;
     }
 }

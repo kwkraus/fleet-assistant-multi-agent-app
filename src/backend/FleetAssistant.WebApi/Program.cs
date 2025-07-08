@@ -1,3 +1,4 @@
+using Azure.Storage.Blobs;
 using FleetAssistant.Shared.Services;
 using FleetAssistant.WebApi.Data;
 using FleetAssistant.WebApi.Options;
@@ -6,7 +7,6 @@ using FleetAssistant.WebApi.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -154,10 +154,10 @@ public class MaintenanceRepository(FleetAssistantDbContext context, ILogger<Main
             var averageCost = maintenanceRecords.Average(m => m.Cost);
             var completedMaintenance = maintenanceRecords.Count(m => m.MaintenanceDate <= DateTime.UtcNow);
             var scheduledMaintenance = maintenanceRecords.Count(m => m.NextMaintenanceDate.HasValue);
-            
+
             var today = DateTime.UtcNow.Date;
-            var overdueMaintenance = maintenanceRecords.Count(m => 
-                m.NextMaintenanceDate.HasValue && 
+            var overdueMaintenance = maintenanceRecords.Count(m =>
+                m.NextMaintenanceDate.HasValue &&
                 m.NextMaintenanceDate.Value < today);
 
             var maintenanceByType = maintenanceRecords

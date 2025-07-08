@@ -29,7 +29,7 @@ public class BlobStorageOptions
     /// <summary>
     /// Allowed file extensions
     /// </summary>
-    public string[] AllowedExtensions { get; set; } = 
+    public string[] AllowedExtensions { get; set; } =
     {
         ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png", ".gif", ".xlsx", ".csv"
     };

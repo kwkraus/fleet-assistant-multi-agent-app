@@ -45,7 +45,7 @@ public class DocumentsController : ControllerBase
 
             // Determine container name based on category
             var containerName = GetContainerName(category);
-            
+
             // Generate blob name with optional vehicle prefix
             var blobName = GenerateBlobName(file.FileName, vehicleId, category);
 
@@ -73,7 +73,7 @@ public class DocumentsController : ControllerBase
                 }
             };
 
-            _logger.LogInformation("Document uploaded successfully: {FileName} for vehicle {VehicleId} in category {Category}", 
+            _logger.LogInformation("Document uploaded successfully: {FileName} for vehicle {VehicleId} in category {Category}",
                 file.FileName, vehicleId, category);
 
             return Ok(response);
@@ -173,7 +173,7 @@ public class DocumentsController : ControllerBase
         try
         {
             var stream = await _blobStorageService.DownloadFileAsync(containerName, blobName);
-            
+
             if (stream == null)
             {
                 return NotFound(new { error = "Document not found" });
@@ -209,9 +209,9 @@ public class DocumentsController : ControllerBase
                 return NotFound(new { error = "Document not found or could not be deleted" });
             }
 
-            return Ok(new 
-            { 
-                success = true, 
+            return Ok(new
+            {
+                success = true,
                 message = "Document deleted successfully",
                 containerName = containerName,
                 blobName = blobName,
@@ -239,7 +239,7 @@ public class DocumentsController : ControllerBase
         try
         {
             containerName ??= "fleet-documents";
-            
+
             var blobNames = await _blobStorageService.ListBlobsAsync(containerName, prefix);
 
             var documents = blobNames.Select(blobName => new
@@ -278,12 +278,12 @@ public class DocumentsController : ControllerBase
         try
         {
             var exists = await _blobStorageService.BlobExistsAsync(containerName, blobName);
-            
+
             if (exists)
             {
                 return Ok();
             }
-            
+
             return NotFound();
         }
         catch (Exception ex)
@@ -312,7 +312,7 @@ public class DocumentsController : ControllerBase
         var extension = Path.GetExtension(originalFileName);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         var uniqueId = Guid.NewGuid().ToString("N")[..8];
-        
+
         var prefix = "";
         if (vehicleId.HasValue)
         {
@@ -322,14 +322,14 @@ public class DocumentsController : ControllerBase
         {
             prefix += $"{category}_";
         }
-        
+
         return $"{prefix}{fileNameWithoutExtension}_{timestamp}_{uniqueId}{extension}";
     }
 
     private static string GetContentTypeFromBlobName(string blobName)
     {
         var extension = Path.GetExtension(blobName).ToLowerInvariant();
-        
+
         return extension switch
         {
             ".pdf" => "application/pdf",
@@ -365,7 +365,7 @@ public class DocumentsController : ControllerBase
                 }
             }
         }
-        
+
         // Fallback to blob name
         return blobName;
     }
@@ -373,7 +373,7 @@ public class DocumentsController : ControllerBase
     private static string? ExtractCategoryFromBlobName(string blobName)
     {
         var knownCategories = new[] { "maintenance", "insurance", "vehicle", "fuel", "financial" };
-        
+
         foreach (var category in knownCategories)
         {
             if (blobName.StartsWith($"{category}_", StringComparison.OrdinalIgnoreCase))
@@ -381,7 +381,7 @@ public class DocumentsController : ControllerBase
                 return category;
             }
         }
-        
+
         return null;
     }
 
@@ -395,7 +395,7 @@ public class DocumentsController : ControllerBase
                 return vehicleId;
             }
         }
-        
+
         return null;
     }
 }

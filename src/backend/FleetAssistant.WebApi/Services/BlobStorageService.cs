@@ -1,7 +1,6 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Options;
-using System.Text;
 
 namespace FleetAssistant.WebApi.Services;
 
@@ -58,8 +57,8 @@ public class BlobStorageService : IBlobStorageService
             await blobClient.UploadAsync(stream, blobUploadOptions);
 
             var blobUrl = blobClient.Uri.ToString();
-            
-            _logger.LogInformation("Successfully uploaded file {FileName} to blob {BlobName} in container {ContainerName}", 
+
+            _logger.LogInformation("Successfully uploaded file {FileName} to blob {BlobName} in container {ContainerName}",
                 file.FileName, blobName, containerName);
 
             return BlobStorageResult.SuccessResult(blobUrl, blobName, containerName, file.Length, GetContentType(file.FileName));
@@ -114,8 +113,8 @@ public class BlobStorageService : IBlobStorageService
             await blobClient.UploadAsync(stream, blobUploadOptions);
 
             var blobUrl = blobClient.Uri.ToString();
-            
-            _logger.LogInformation("Successfully uploaded stream for file {FileName} to blob {BlobName} in container {ContainerName}", 
+
+            _logger.LogInformation("Successfully uploaded stream for file {FileName} to blob {BlobName} in container {ContainerName}",
                 fileName, blobName, containerName);
 
             return BlobStorageResult.SuccessResult(blobUrl, blobName, containerName, stream.Length, GetContentType(fileName));
@@ -141,9 +140,9 @@ public class BlobStorageService : IBlobStorageService
             }
 
             var response = await blobClient.DownloadStreamingAsync();
-            
+
             _logger.LogInformation("Successfully downloaded blob {BlobName} from container {ContainerName}", blobName, containerName);
-            
+
             return response.Value.Content;
         }
         catch (Exception ex)
@@ -161,7 +160,7 @@ public class BlobStorageService : IBlobStorageService
             var blobClient = containerClient.GetBlobClient(blobName);
 
             var response = await blobClient.DeleteIfExistsAsync();
-            
+
             if (response.Value)
             {
                 _logger.LogInformation("Successfully deleted blob {BlobName} from container {ContainerName}", blobName, containerName);
@@ -193,7 +192,7 @@ public class BlobStorageService : IBlobStorageService
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             var blobClient = containerClient.GetBlobClient(blobName);
-            
+
             var response = await blobClient.ExistsAsync();
             return response.Value;
         }
@@ -209,7 +208,7 @@ public class BlobStorageService : IBlobStorageService
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            
+
             if (!await containerClient.ExistsAsync())
             {
                 _logger.LogWarning("Container {ContainerName} does not exist", containerName);
@@ -217,20 +216,20 @@ public class BlobStorageService : IBlobStorageService
             }
 
             var blobNames = new List<string>();
-            
+
             await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: prefix))
             {
                 blobNames.Add(blobItem.Name);
             }
 
-            _logger.LogInformation("Listed {Count} blobs from container {ContainerName} with prefix {Prefix}", 
+            _logger.LogInformation("Listed {Count} blobs from container {ContainerName} with prefix {Prefix}",
                 blobNames.Count, containerName, prefix ?? "none");
 
             return blobNames;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error listing blobs from container {ContainerName} with prefix {Prefix}", 
+            _logger.LogError(ex, "Error listing blobs from container {ContainerName} with prefix {Prefix}",
                 containerName, prefix ?? "none");
             return Enumerable.Empty<string>();
         }
@@ -242,13 +241,13 @@ public class BlobStorageService : IBlobStorageService
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             var response = await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
-            
+
             if (response != null)
             {
                 _logger.LogInformation("Created container {ContainerName}", containerName);
                 return true;
             }
-            
+
             return true; // Container already exists
         }
         catch (Exception ex)
@@ -285,14 +284,14 @@ public class BlobStorageService : IBlobStorageService
         var extension = Path.GetExtension(originalFileName);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         var uniqueId = Guid.NewGuid().ToString("N")[..8];
-        
+
         return $"{fileNameWithoutExtension}_{timestamp}_{uniqueId}{extension}";
     }
 
     private static string GetContentType(string fileName)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        
+
         return extension switch
         {
             ".pdf" => "application/pdf",

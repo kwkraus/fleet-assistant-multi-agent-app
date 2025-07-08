@@ -88,7 +88,7 @@ public class FinancialsController : ControllerBase
 
             if (!string.IsNullOrEmpty(providerName))
             {
-                financialRecords = financialRecords.Where(f => f.ProviderName != null && 
+                financialRecords = financialRecords.Where(f => f.ProviderName != null &&
                     f.ProviderName.Contains(providerName, StringComparison.OrdinalIgnoreCase));
             }
 
@@ -201,9 +201,9 @@ public class FinancialsController : ControllerBase
             // Get financial records with upcoming payment dates
             var targetDate = DateTime.UtcNow.Date.AddDays(daysAhead);
             var allFinancials = await _financialRepository.GetAllAsync();
-            
+
             var upcomingPayments = allFinancials
-                .Where(f => f.NextPaymentDate.HasValue && 
+                .Where(f => f.NextPaymentDate.HasValue &&
                            f.NextPaymentDate.Value.Date <= targetDate &&
                            f.NextPaymentDate.Value.Date >= DateTime.UtcNow.Date)
                 .Where(f => !vehicleId.HasValue || f.VehicleId == vehicleId.Value)
@@ -447,7 +447,7 @@ public class FinancialsController : ControllerBase
             // Get vehicle financial records to find purchase price and depreciation info
             var financialRecords = await _financialRepository.GetByVehicleIdAsync(vehicleId);
             var purchaseRecord = financialRecords.FirstOrDefault(f => f.FinancialType == FinancialType.Purchase);
-            
+
             if (purchaseRecord == null)
             {
                 return BadRequest(new { error = "Vehicle purchase record not found for depreciation calculation" });
@@ -569,52 +569,52 @@ public class FinancialsController : ControllerBase
     {
         if (dto.FinancialType.HasValue)
             financial.FinancialType = dto.FinancialType.Value;
-        
+
         if (dto.Amount.HasValue)
             financial.Amount = dto.Amount.Value;
-        
+
         if (dto.PaymentFrequency.HasValue)
             financial.PaymentFrequency = dto.PaymentFrequency;
-        
+
         if (dto.StartDate.HasValue)
             financial.StartDate = dto.StartDate.Value;
-        
+
         if (dto.EndDate.HasValue)
             financial.EndDate = dto.EndDate;
-        
+
         if (dto.NextPaymentDate.HasValue)
             financial.NextPaymentDate = dto.NextPaymentDate;
-        
+
         if (dto.ProviderName != null)
             financial.ProviderName = dto.ProviderName;
-        
+
         if (dto.AccountNumber != null)
             financial.AccountNumber = dto.AccountNumber;
-        
+
         if (dto.InterestRate.HasValue)
             financial.InterestRate = dto.InterestRate;
-        
+
         if (dto.RemainingBalance.HasValue)
             financial.RemainingBalance = dto.RemainingBalance;
-        
+
         if (dto.PurchasePrice.HasValue)
             financial.PurchasePrice = dto.PurchasePrice;
-        
+
         if (dto.CurrentValue.HasValue)
             financial.CurrentValue = dto.CurrentValue;
-        
+
         if (dto.DepreciationMethod.HasValue)
             financial.DepreciationMethod = dto.DepreciationMethod;
-        
+
         if (dto.DepreciationRate.HasValue)
             financial.DepreciationRate = dto.DepreciationRate;
-        
+
         if (dto.DocumentUrl != null)
             financial.DocumentUrl = dto.DocumentUrl;
-        
+
         if (dto.Notes != null)
             financial.Notes = dto.Notes;
-        
+
         financial.UpdatedAt = DateTime.UtcNow;
     }
 }

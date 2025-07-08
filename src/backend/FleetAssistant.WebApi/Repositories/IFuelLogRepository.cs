@@ -16,10 +16,10 @@ public interface IFuelLogRepository : IRepository<FuelLog>
     /// Get fuel logs within a date range
     /// </summary>
     Task<IEnumerable<FuelLog>> GetByDateRangeAsync(
-        DateTime startDate, 
-        DateTime endDate, 
+        DateTime startDate,
+        DateTime endDate,
         int? vehicleId = null,
-        int page = 1, 
+        int page = 1,
         int pageSize = 20);
 
     /// <summary>

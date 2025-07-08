@@ -81,7 +81,7 @@ public class FuelLogsController : ControllerBase
             // Apply additional filtering
             if (!string.IsNullOrEmpty(fuelType))
             {
-                fuelLogs = fuelLogs.Where(f => f.FuelType != null && 
+                fuelLogs = fuelLogs.Where(f => f.FuelType != null &&
                     f.FuelType.Contains(fuelType, StringComparison.OrdinalIgnoreCase));
             }
 
@@ -216,7 +216,7 @@ public class FuelLogsController : ControllerBase
             }
 
             var fuelLog = MapFromCreateDto(createFuelLogDto);
-            
+
             // Calculate MPG and save the fuel log
             var createdFuelLog = await _fuelLogRepository.CalculateAndUpdateMpgAsync(fuelLog);
 
@@ -261,7 +261,7 @@ public class FuelLogsController : ControllerBase
             }
 
             UpdateFromDto(existingFuelLog, updateFuelLogDto);
-            
+
             // Recalculate MPG if relevant fields changed
             var updatedFuelLog = await _fuelLogRepository.CalculateAndUpdateMpgAsync(existingFuelLog);
             updatedFuelLog = await _fuelLogRepository.UpdateAsync(updatedFuelLog);
@@ -399,28 +399,28 @@ public class FuelLogsController : ControllerBase
     {
         if (dto.FuelDate.HasValue)
             fuelLog.FuelDate = dto.FuelDate.Value;
-        
+
         if (dto.OdometerReading.HasValue)
             fuelLog.OdometerReading = dto.OdometerReading.Value;
-        
+
         if (dto.Gallons.HasValue)
             fuelLog.Gallons = dto.Gallons.Value;
-        
+
         if (dto.PricePerGallon.HasValue)
             fuelLog.PricePerGallon = dto.PricePerGallon.Value;
-        
+
         if (dto.TotalCost.HasValue)
             fuelLog.TotalCost = dto.TotalCost.Value;
-        
+
         if (dto.Location != null)
             fuelLog.Location = dto.Location;
-        
+
         if (dto.FuelType != null)
             fuelLog.FuelType = dto.FuelType;
-        
+
         if (dto.Notes != null)
             fuelLog.Notes = dto.Notes;
-        
+
         fuelLog.UpdatedAt = DateTime.UtcNow;
     }
 }
