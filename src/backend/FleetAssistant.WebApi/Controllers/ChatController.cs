@@ -147,20 +147,21 @@ public class ChatController(
         return Ok();
     }
 
-    /// <summary>
-    /// Get the health status of the chat service
-    /// </summary>
-    /// <returns>Health status information</returns>
-    /// <response code="200">Service is healthy</response>
+    // Pseudocode:
+    // 1. Use System.Reflection to get the current assembly.
+    // 2. Get the assembly name using Assembly.GetExecutingAssembly().GetName().Name.
+    // 3. Replace the hardcoded "FleetAssistant.WebApi" with the dynamic value in GetHealth().
+
     [HttpGet("health")]
     [ProducesResponseType(typeof(object), 200)]
     public IActionResult GetHealth()
     {
+        var assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
         return Ok(new
         {
             status = "healthy",
             timestamp = DateTime.UtcNow,
-            service = "FleetAssistant.WebApi"
+            service = assemblyName
         });
     }
 
