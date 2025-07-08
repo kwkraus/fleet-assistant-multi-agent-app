@@ -7,13 +7,8 @@ namespace FleetAssistant.WebApi.Repositories;
 /// <summary>
 /// Repository implementation for VehicleFinancial operations
 /// </summary>
-public class FinancialRepository : Repository<VehicleFinancial>, IFinancialRepository
+public class FinancialRepository(FleetAssistantDbContext context, ILogger<FinancialRepository> logger) : Repository<VehicleFinancial>(context, logger), IFinancialRepository
 {
-    public FinancialRepository(FleetAssistantDbContext context, ILogger<FinancialRepository> logger)
-        : base(context, logger)
-    {
-    }
-
     public async Task<IEnumerable<VehicleFinancial>> GetByVehicleIdAsync(int vehicleId, int page = 1, int pageSize = 20)
     {
         try

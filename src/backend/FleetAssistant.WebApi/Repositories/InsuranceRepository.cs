@@ -7,13 +7,8 @@ namespace FleetAssistant.WebApi.Repositories;
 /// <summary>
 /// Repository implementation for InsurancePolicy operations
 /// </summary>
-public class InsuranceRepository : Repository<InsurancePolicy>, IInsuranceRepository
+public class InsuranceRepository(FleetAssistantDbContext context, ILogger<InsuranceRepository> logger) : Repository<InsurancePolicy>(context, logger), IInsuranceRepository
 {
-    public InsuranceRepository(FleetAssistantDbContext context, ILogger<InsuranceRepository> logger)
-        : base(context, logger)
-    {
-    }
-
     public async Task<IEnumerable<InsurancePolicy>> GetByVehicleIdAsync(int vehicleId, int page = 1, int pageSize = 20)
     {
         try
@@ -52,6 +47,22 @@ public class InsuranceRepository : Repository<InsurancePolicy>, IInsuranceReposi
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving insurance policies for provider {Provider}", provider);
+            throw;
+        }
+    }
+
+    public async Task<InsurancePolicy?> GetByPolicyNumberAsync(string policyNumber)
+    {
+        try
+        {
+            return await _dbSet
+                .Include(i => i.VehicleInsurances)
+                    .ThenInclude(vi => vi.Vehicle)
+                .FirstOrDefaultAsync(i => i.PolicyNumber == policyNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving insurance policy with policy number {PolicyNumber}", policyNumber);
             throw;
         }
     }

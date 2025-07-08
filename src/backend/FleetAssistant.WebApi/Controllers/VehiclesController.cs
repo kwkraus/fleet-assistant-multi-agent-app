@@ -1,5 +1,7 @@
 using FleetAssistant.Shared.DTOs;
 using FleetAssistant.Shared.Models;
+using FleetAssistant.WebApi.Repositories;
+using FleetAssistant.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetAssistant.WebApi.Controllers;
@@ -12,10 +14,17 @@ namespace FleetAssistant.WebApi.Controllers;
 [Produces("application/json")]
 public class VehiclesController : ControllerBase
 {
+    private readonly IVehicleRepository _vehicleRepository;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<VehiclesController> _logger;
 
-    public VehiclesController(ILogger<VehiclesController> logger)
+    public VehiclesController(
+        IVehicleRepository vehicleRepository,
+        IBlobStorageService blobStorageService,
+        ILogger<VehiclesController> logger)
     {
+        _vehicleRepository = vehicleRepository;
+        _blobStorageService = blobStorageService;
         _logger = logger;
     }
 
@@ -50,11 +59,41 @@ public class VehiclesController : ControllerBase
             _logger.LogInformation("Getting vehicles with filters - Status: {Status}, Make: {Make}, Model: {Model}, Year: {Year}, Page: {Page}, PageSize: {PageSize}",
                 status, make, model, year, page, pageSize);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            // For now, return a placeholder response
-            var vehicles = new List<VehicleDto>();
+            IEnumerable<Vehicle> vehicles;
 
-            return Ok(vehicles);
+            if (status.HasValue)
+            {
+                vehicles = await _vehicleRepository.GetByStatusAsync(status.Value, page, pageSize);
+            }
+            else
+            {
+                vehicles = await _vehicleRepository.GetAllAsync();
+            }
+
+            // Apply additional filtering
+            if (!string.IsNullOrEmpty(make))
+            {
+                vehicles = vehicles.Where(v => v.Make.Contains(make, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrEmpty(model))
+            {
+                vehicles = vehicles.Where(v => v.Model.Contains(model, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (year.HasValue)
+            {
+                vehicles = vehicles.Where(v => v.Year == year.Value);
+            }
+
+            // Apply pagination if not already applied in repository
+            if (!status.HasValue)
+            {
+                vehicles = vehicles.Skip((page - 1) * pageSize).Take(pageSize);
+            }
+
+            var vehicleDtos = vehicles.Select(MapToDto);
+            return Ok(vehicleDtos);
         }
         catch (Exception ex)
         {
@@ -79,8 +118,14 @@ public class VehiclesController : ControllerBase
         {
             _logger.LogInformation("Getting vehicle with ID: {VehicleId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Vehicle not found" });
+            var vehicle = await _vehicleRepository.GetByIdAsync(id);
+            if (vehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
+
+            var vehicleDto = MapToDto(vehicle);
+            return Ok(vehicleDto);
         }
         catch (Exception ex)
         {
@@ -112,30 +157,17 @@ public class VehiclesController : ControllerBase
 
             _logger.LogInformation("Creating new vehicle with VIN: {Vin}", createVehicleDto.Vin);
 
-            // TODO: Implement actual data access when Entity Framework is set up
             // Check if VIN already exists
-            // Create new vehicle
-            // Return created vehicle
-
-            var createdVehicle = new VehicleDto
+            if (await _vehicleRepository.VinExistsAsync(createVehicleDto.Vin))
             {
-                Id = 1, // Placeholder
-                Name = createVehicleDto.Name,
-                Vin = createVehicleDto.Vin,
-                Make = createVehicleDto.Make,
-                Model = createVehicleDto.Model,
-                Year = createVehicleDto.Year,
-                LicensePlate = createVehicleDto.LicensePlate,
-                Color = createVehicleDto.Color,
-                OdometerReading = createVehicleDto.OdometerReading,
-                Status = createVehicleDto.Status,
-                AcquisitionDate = createVehicleDto.AcquisitionDate,
-                Details = createVehicleDto.Details,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                return Conflict(new { error = "A vehicle with this VIN already exists" });
+            }
 
-            return CreatedAtAction(nameof(GetVehicle), new { id = createdVehicle.Id }, createdVehicle);
+            var vehicle = MapFromCreateDto(createVehicleDto);
+            var createdVehicle = await _vehicleRepository.AddAsync(vehicle);
+
+            var createdVehicleDto = MapToDto(createdVehicle);
+            return CreatedAtAction(nameof(GetVehicle), new { id = createdVehicleDto.Id }, createdVehicleDto);
         }
         catch (Exception ex)
         {
@@ -170,8 +202,25 @@ public class VehiclesController : ControllerBase
 
             _logger.LogInformation("Updating vehicle with ID: {VehicleId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Vehicle not found" });
+            var existingVehicle = await _vehicleRepository.GetByIdAsync(id);
+            if (existingVehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
+
+            // Check VIN uniqueness if VIN is being updated
+            if (!string.IsNullOrEmpty(updateVehicleDto.Vin) && 
+                updateVehicleDto.Vin != existingVehicle.Vin &&
+                await _vehicleRepository.VinExistsAsync(updateVehicleDto.Vin, id))
+            {
+                return Conflict(new { error = "A vehicle with this VIN already exists" });
+            }
+
+            UpdateFromDto(existingVehicle, updateVehicleDto);
+            var updatedVehicle = await _vehicleRepository.UpdateAsync(existingVehicle);
+
+            var updatedVehicleDto = MapToDto(updatedVehicle);
+            return Ok(updatedVehicleDto);
         }
         catch (Exception ex)
         {
@@ -198,12 +247,19 @@ public class VehiclesController : ControllerBase
         {
             _logger.LogInformation("Deleting vehicle with ID: {VehicleId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            // Check if vehicle exists
-            // Check if vehicle has associated records (fuel logs, maintenance, etc.)
-            // Delete vehicle or return conflict if it has dependencies
+            var vehicle = await _vehicleRepository.GetByIdAsync(id);
+            if (vehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
 
-            return NotFound(new { error = "Vehicle not found" });
+            // Check if vehicle has associated records that would prevent deletion
+            // Note: This depends on your business rules - you might want to check for
+            // associated fuel logs, maintenance records, insurance policies, etc.
+            // For now, we'll allow deletion
+
+            await _vehicleRepository.DeleteAsync(id);
+            return NoContent();
         }
         catch (Exception ex)
         {
@@ -225,19 +281,7 @@ public class VehiclesController : ControllerBase
         {
             _logger.LogInformation("Getting vehicle statistics");
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var statistics = new
-            {
-                TotalVehicles = 0,
-                ActiveVehicles = 0,
-                InMaintenanceVehicles = 0,
-                OutOfServiceVehicles = 0,
-                RetiredVehicles = 0,
-                SoldVehicles = 0,
-                AverageAge = 0.0,
-                TotalMileage = 0
-            };
-
+            var statistics = await _vehicleRepository.GetStatisticsAsync();
             return Ok(statistics);
         }
         catch (Exception ex)
@@ -245,5 +289,93 @@ public class VehiclesController : ControllerBase
             _logger.LogError(ex, "Error retrieving vehicle statistics");
             return StatusCode(500, new { error = "An error occurred while retrieving vehicle statistics" });
         }
+    }
+
+    /// <summary>
+    /// Maps Vehicle entity to VehicleDto
+    /// </summary>
+    private static VehicleDto MapToDto(Vehicle vehicle)
+    {
+        return new VehicleDto
+        {
+            Id = vehicle.Id,
+            Name = vehicle.Name,
+            Vin = vehicle.Vin,
+            Make = vehicle.Make,
+            Model = vehicle.Model,
+            Year = vehicle.Year,
+            LicensePlate = vehicle.LicensePlate,
+            Color = vehicle.Color,
+            OdometerReading = vehicle.OdometerReading,
+            Status = vehicle.Status,
+            AcquisitionDate = vehicle.AcquisitionDate,
+            Details = vehicle.Details,
+            CreatedAt = vehicle.CreatedAt,
+            UpdatedAt = vehicle.UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Maps CreateVehicleDto to Vehicle entity
+    /// </summary>
+    private static Vehicle MapFromCreateDto(CreateVehicleDto dto)
+    {
+        return new Vehicle
+        {
+            Name = dto.Name,
+            Vin = dto.Vin,
+            Make = dto.Make,
+            Model = dto.Model,
+            Year = dto.Year,
+            LicensePlate = dto.LicensePlate,
+            Color = dto.Color,
+            OdometerReading = dto.OdometerReading,
+            Status = dto.Status,
+            AcquisitionDate = dto.AcquisitionDate,
+            Details = dto.Details,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Updates Vehicle entity with values from UpdateVehicleDto
+    /// </summary>
+    private static void UpdateFromDto(Vehicle vehicle, UpdateVehicleDto dto)
+    {
+        if (!string.IsNullOrEmpty(dto.Name))
+            vehicle.Name = dto.Name;
+        
+        if (!string.IsNullOrEmpty(dto.Vin))
+            vehicle.Vin = dto.Vin;
+        
+        if (!string.IsNullOrEmpty(dto.Make))
+            vehicle.Make = dto.Make;
+        
+        if (!string.IsNullOrEmpty(dto.Model))
+            vehicle.Model = dto.Model;
+        
+        if (dto.Year.HasValue)
+            vehicle.Year = dto.Year.Value;
+        
+        if (dto.LicensePlate != null)
+            vehicle.LicensePlate = dto.LicensePlate;
+        
+        if (dto.Color != null)
+            vehicle.Color = dto.Color;
+        
+        if (dto.OdometerReading.HasValue)
+            vehicle.OdometerReading = dto.OdometerReading.Value;
+        
+        if (dto.Status.HasValue)
+            vehicle.Status = dto.Status.Value;
+        
+        if (dto.AcquisitionDate.HasValue)
+            vehicle.AcquisitionDate = dto.AcquisitionDate;
+        
+        if (dto.Details != null)
+            vehicle.Details = dto.Details;
+        
+        vehicle.UpdatedAt = DateTime.UtcNow;
     }
 }

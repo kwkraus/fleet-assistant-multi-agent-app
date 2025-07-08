@@ -1,4 +1,7 @@
 using FleetAssistant.Shared.DTOs;
+using FleetAssistant.Shared.Models;
+using FleetAssistant.WebApi.Repositories;
+using FleetAssistant.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetAssistant.WebApi.Controllers;
@@ -11,10 +14,20 @@ namespace FleetAssistant.WebApi.Controllers;
 [Produces("application/json")]
 public class InsuranceController : ControllerBase
 {
+    private readonly IInsuranceRepository _insuranceRepository;
+    private readonly IVehicleRepository _vehicleRepository;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<InsuranceController> _logger;
 
-    public InsuranceController(ILogger<InsuranceController> logger)
+    public InsuranceController(
+        IInsuranceRepository insuranceRepository,
+        IVehicleRepository vehicleRepository,
+        IBlobStorageService blobStorageService,
+        ILogger<InsuranceController> logger)
     {
+        _insuranceRepository = insuranceRepository;
+        _vehicleRepository = vehicleRepository;
+        _blobStorageService = blobStorageService;
         _logger = logger;
     }
 
@@ -49,10 +62,31 @@ public class InsuranceController : ControllerBase
             _logger.LogInformation("Getting insurance policies with filters - Provider: {ProviderName}, CoverageType: {CoverageType}, IsActive: {IsActive}, ExpiringInDays: {ExpiringInDays}, Page: {Page}, PageSize: {PageSize}",
                 providerName, coverageType, isActive, expiringInDays, page, pageSize);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var policies = new List<InsurancePolicyDto>();
+            IEnumerable<InsurancePolicy> policies;
 
-            return Ok(policies);
+            if (!string.IsNullOrEmpty(providerName))
+            {
+                policies = await _insuranceRepository.GetByProviderAsync(providerName, page, pageSize);
+            }
+            else if (!string.IsNullOrEmpty(coverageType))
+            {
+                policies = await _insuranceRepository.GetByCoverageTypeAsync(coverageType, page, pageSize);
+            }
+            else if (isActive.HasValue && isActive.Value)
+            {
+                policies = await _insuranceRepository.GetActiveAsync(page, pageSize);
+            }
+            else if (expiringInDays.HasValue)
+            {
+                policies = await _insuranceRepository.GetExpiringAsync(expiringInDays.Value, page, pageSize);
+            }
+            else
+            {
+                policies = await _insuranceRepository.GetAllAsync();
+            }
+
+            var policyDtos = policies.Select(p => MapToDto(p));
+            return Ok(policyDtos);
         }
         catch (Exception ex)
         {
@@ -77,8 +111,14 @@ public class InsuranceController : ControllerBase
         {
             _logger.LogInformation("Getting insurance policy with ID: {PolicyId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Insurance policy not found" });
+            var policy = await _insuranceRepository.GetByIdAsync(id);
+            if (policy == null)
+            {
+                return NotFound(new { error = "Insurance policy not found" });
+            }
+
+            var policyDto = MapToDto(policy);
+            return Ok(policyDto);
         }
         catch (Exception ex)
         {
@@ -110,28 +150,18 @@ public class InsuranceController : ControllerBase
 
             _logger.LogInformation("Creating new insurance policy: {PolicyNumber}", createInsurancePolicyDto.PolicyNumber);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var createdPolicy = new InsurancePolicyDto
+            // Check if policy number already exists
+            var existingPolicy = await _insuranceRepository.GetByPolicyNumberAsync(createInsurancePolicyDto.PolicyNumber);
+            if (existingPolicy != null)
             {
-                Id = 1, // Placeholder
-                PolicyNumber = createInsurancePolicyDto.PolicyNumber,
-                ProviderName = createInsurancePolicyDto.ProviderName,
-                ProviderContact = createInsurancePolicyDto.ProviderContact,
-                StartDate = createInsurancePolicyDto.StartDate,
-                EndDate = createInsurancePolicyDto.EndDate,
-                PremiumAmount = createInsurancePolicyDto.PremiumAmount,
-                PaymentFrequency = createInsurancePolicyDto.PaymentFrequency,
-                Deductible = createInsurancePolicyDto.Deductible,
-                CoverageLimit = createInsurancePolicyDto.CoverageLimit,
-                CoverageType = createInsurancePolicyDto.CoverageType,
-                CoverageDetails = createInsurancePolicyDto.CoverageDetails,
-                PolicyDocumentUrl = createInsurancePolicyDto.PolicyDocumentUrl,
-                Notes = createInsurancePolicyDto.Notes,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                return Conflict(new { error = "A policy with this policy number already exists" });
+            }
 
-            return CreatedAtAction(nameof(GetInsurancePolicy), new { id = createdPolicy.Id }, createdPolicy);
+            var policy = MapFromCreateDto(createInsurancePolicyDto);
+            var createdPolicy = await _insuranceRepository.AddAsync(policy);
+            
+            var createdPolicyDto = MapToDto(createdPolicy);
+            return CreatedAtAction(nameof(GetInsurancePolicy), new { id = createdPolicyDto.Id }, createdPolicyDto);
         }
         catch (Exception ex)
         {
@@ -164,8 +194,28 @@ public class InsuranceController : ControllerBase
 
             _logger.LogInformation("Updating insurance policy with ID: {PolicyId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Insurance policy not found" });
+            var existingPolicy = await _insuranceRepository.GetByIdAsync(id);
+            if (existingPolicy == null)
+            {
+                return NotFound(new { error = "Insurance policy not found" });
+            }
+
+            // Check if updating policy number would create a conflict
+            if (!string.IsNullOrEmpty(updateInsurancePolicyDto.PolicyNumber) &&
+                updateInsurancePolicyDto.PolicyNumber != existingPolicy.PolicyNumber)
+            {
+                var duplicatePolicy = await _insuranceRepository.GetByPolicyNumberAsync(updateInsurancePolicyDto.PolicyNumber);
+                if (duplicatePolicy != null)
+                {
+                    return Conflict(new { error = "A policy with this policy number already exists" });
+                }
+            }
+
+            UpdateFromDto(existingPolicy, updateInsurancePolicyDto);
+            var updatedPolicy = await _insuranceRepository.UpdateAsync(existingPolicy);
+
+            var updatedPolicyDto = MapToDto(updatedPolicy);
+            return Ok(updatedPolicyDto);
         }
         catch (Exception ex)
         {
@@ -192,8 +242,21 @@ public class InsuranceController : ControllerBase
         {
             _logger.LogInformation("Deleting insurance policy with ID: {PolicyId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Insurance policy not found" });
+            var policy = await _insuranceRepository.GetByIdAsync(id);
+            if (policy == null)
+            {
+                return NotFound(new { error = "Insurance policy not found" });
+            }
+
+            // Check if policy has active vehicle insurances
+            if (policy.VehicleInsurances?.Any(vi => vi.IsActive) == true)
+            {
+                return Conflict(new { error = "Cannot delete policy with active vehicle insurances. Remove vehicles first." });
+            }
+
+            await _insuranceRepository.DeleteAsync(id);
+
+            return NoContent();
         }
         catch (Exception ex)
         {
@@ -228,8 +291,29 @@ public class InsuranceController : ControllerBase
 
             _logger.LogInformation("Adding vehicle {VehicleId} to insurance policy {PolicyId}", manageVehicleInsuranceDto.VehicleId, id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Insurance policy not found" });
+            // Check if policy exists
+            var policy = await _insuranceRepository.GetByIdAsync(id);
+            if (policy == null)
+            {
+                return NotFound(new { error = "Insurance policy not found" });
+            }
+
+            // Check if vehicle exists
+            var vehicle = await _vehicleRepository.GetByIdAsync(manageVehicleInsuranceDto.VehicleId);
+            if (vehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
+
+            // Check if vehicle is already covered by this policy
+            if (policy.VehicleInsurances?.Any(vi => vi.VehicleId == manageVehicleInsuranceDto.VehicleId && vi.IsActive) == true)
+            {
+                return Conflict(new { error = "Vehicle is already covered by this policy" });
+            }
+
+            // Add vehicle to policy (this would need to be implemented in the repository)
+            // For now, this is a simplified implementation
+            return NotFound(new { error = "Vehicle-policy management not fully implemented yet" });
         }
         catch (Exception ex)
         {
@@ -255,8 +339,23 @@ public class InsuranceController : ControllerBase
         {
             _logger.LogInformation("Removing vehicle {VehicleId} from insurance policy {PolicyId}", vehicleId, id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Insurance policy or vehicle relationship not found" });
+            // Check if policy exists
+            var policy = await _insuranceRepository.GetByIdAsync(id);
+            if (policy == null)
+            {
+                return NotFound(new { error = "Insurance policy not found" });
+            }
+
+            // Check if vehicle is covered by this policy
+            var vehicleInsurance = policy.VehicleInsurances?.FirstOrDefault(vi => vi.VehicleId == vehicleId && vi.IsActive);
+            if (vehicleInsurance == null)
+            {
+                return NotFound(new { error = "Vehicle is not covered by this policy or relationship not found" });
+            }
+
+            // Remove vehicle from policy (this would need to be implemented in the repository)
+            // For now, this is a simplified implementation
+            return NotFound(new { error = "Vehicle-policy management not fully implemented yet" });
         }
         catch (Exception ex)
         {
@@ -284,9 +383,24 @@ public class InsuranceController : ControllerBase
         {
             _logger.LogInformation("Getting insurance policies for vehicle {VehicleId}", vehicleId);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var policies = new List<InsurancePolicyDto>();
-            return Ok(policies);
+            // Check if vehicle exists
+            var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
+
+            var policies = await _insuranceRepository.GetByVehicleIdAsync(vehicleId);
+
+            // Filter out expired policies if not requested
+            if (!includeExpired)
+            {
+                var today = DateTime.UtcNow.Date;
+                policies = policies.Where(p => p.EndDate >= today);
+            }
+
+            var policyDtos = policies.Select(p => MapToDto(p));
+            return Ok(policyDtos);
         }
         catch (Exception ex)
         {
@@ -308,20 +422,7 @@ public class InsuranceController : ControllerBase
         {
             _logger.LogInformation("Getting insurance statistics");
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var statistics = new
-            {
-                TotalPolicies = 0,
-                ActivePolicies = 0,
-                ExpiringPolicies = 0,
-                TotalVehiclesCovered = 0,
-                TotalPremiumAmount = 0.0m,
-                AveragePremium = 0.0m,
-                TotalCoverageLimit = 0.0m,
-                PoliciesByProvider = new Dictionary<string, int>(),
-                PoliciesByCoverageType = new Dictionary<string, int>()
-            };
-
+            var statistics = await _insuranceRepository.GetInsuranceStatsAsync();
             return Ok(statistics);
         }
         catch (Exception ex)
@@ -329,5 +430,113 @@ public class InsuranceController : ControllerBase
             _logger.LogError(ex, "Error retrieving insurance statistics");
             return StatusCode(500, new { error = "An error occurred while retrieving insurance statistics" });
         }
+    }
+
+    /// <summary>
+    /// Maps InsurancePolicy entity to InsurancePolicyDto
+    /// </summary>
+    private static InsurancePolicyDto MapToDto(InsurancePolicy policy)
+    {
+        return new InsurancePolicyDto
+        {
+            Id = policy.Id,
+            PolicyNumber = policy.PolicyNumber,
+            ProviderName = policy.ProviderName,
+            ProviderContact = policy.ProviderContact,
+            StartDate = policy.StartDate,
+            EndDate = policy.EndDate,
+            PremiumAmount = policy.PremiumAmount,
+            PaymentFrequency = policy.PaymentFrequency,
+            Deductible = policy.Deductible,
+            CoverageLimit = policy.CoverageLimit,
+            CoverageType = policy.CoverageType,
+            CoverageDetails = policy.CoverageDetails,
+            PolicyDocumentUrl = policy.PolicyDocumentUrl,
+            Notes = policy.Notes,
+            CreatedAt = policy.CreatedAt,
+            UpdatedAt = policy.UpdatedAt,
+            CoveredVehicles = policy.VehicleInsurances?.Select(vi => new VehicleInsuranceDto
+            {
+                Id = vi.Id,
+                VehicleId = vi.VehicleId,
+                VehicleName = vi.Vehicle?.Name,
+                VehicleVin = vi.Vehicle?.Vin,
+                StartDate = vi.StartDate,
+                EndDate = vi.EndDate,
+                IsActive = vi.IsActive
+            }).ToList() ?? new List<VehicleInsuranceDto>()
+        };
+    }
+
+    /// <summary>
+    /// Maps CreateInsurancePolicyDto to InsurancePolicy entity
+    /// </summary>
+    private static InsurancePolicy MapFromCreateDto(CreateInsurancePolicyDto dto)
+    {
+        return new InsurancePolicy
+        {
+            PolicyNumber = dto.PolicyNumber,
+            ProviderName = dto.ProviderName,
+            ProviderContact = dto.ProviderContact,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            PremiumAmount = dto.PremiumAmount,
+            PaymentFrequency = dto.PaymentFrequency,
+            Deductible = dto.Deductible,
+            CoverageLimit = dto.CoverageLimit,
+            CoverageType = dto.CoverageType,
+            CoverageDetails = dto.CoverageDetails,
+            PolicyDocumentUrl = dto.PolicyDocumentUrl,
+            Notes = dto.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Updates InsurancePolicy entity with values from UpdateInsurancePolicyDto
+    /// </summary>
+    private static void UpdateFromDto(InsurancePolicy policy, UpdateInsurancePolicyDto dto)
+    {
+        if (!string.IsNullOrEmpty(dto.PolicyNumber))
+            policy.PolicyNumber = dto.PolicyNumber;
+        
+        if (!string.IsNullOrEmpty(dto.ProviderName))
+            policy.ProviderName = dto.ProviderName;
+        
+        if (dto.ProviderContact != null)
+            policy.ProviderContact = dto.ProviderContact;
+        
+        if (dto.StartDate.HasValue)
+            policy.StartDate = dto.StartDate.Value;
+        
+        if (dto.EndDate.HasValue)
+            policy.EndDate = dto.EndDate.Value;
+        
+        if (dto.PremiumAmount.HasValue)
+            policy.PremiumAmount = dto.PremiumAmount.Value;
+        
+        if (dto.PaymentFrequency.HasValue)
+            policy.PaymentFrequency = dto.PaymentFrequency.Value;
+        
+        if (dto.Deductible.HasValue)
+            policy.Deductible = dto.Deductible.Value;
+        
+        if (dto.CoverageLimit.HasValue)
+            policy.CoverageLimit = dto.CoverageLimit.Value;
+        
+        if (dto.CoverageType.HasValue)
+            policy.CoverageType = dto.CoverageType.Value;
+        
+        if (dto.CoverageDetails != null)
+            policy.CoverageDetails = dto.CoverageDetails;
+        
+        if (dto.PolicyDocumentUrl != null)
+            policy.PolicyDocumentUrl = dto.PolicyDocumentUrl;
+        
+        if (dto.Notes != null)
+            policy.Notes = dto.Notes;
+        
+        policy.UpdatedAt = DateTime.UtcNow;
     }
 }

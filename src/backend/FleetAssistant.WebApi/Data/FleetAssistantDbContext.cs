@@ -30,6 +30,9 @@ public class FleetAssistantDbContext : DbContext
         {
             entity.HasKey(v => v.Id);
             
+            entity.Property(v => v.Id)
+                .ValueGeneratedOnAdd();
+            
             entity.Property(v => v.Name)
                 .IsRequired()
                 .HasMaxLength(100);
@@ -92,6 +95,9 @@ public class FleetAssistantDbContext : DbContext
         {
             entity.HasKey(fl => fl.Id);
             
+            entity.Property(fl => fl.Id)
+                .ValueGeneratedOnAdd();
+            
             entity.Property(fl => fl.Gallons)
                 .HasColumnType("decimal(6,2)")
                 .IsRequired();
@@ -127,6 +133,9 @@ public class FleetAssistantDbContext : DbContext
         modelBuilder.Entity<MaintenanceRecord>(entity =>
         {
             entity.HasKey(mr => mr.Id);
+            
+            entity.Property(mr => mr.Id)
+                .ValueGeneratedOnAdd();
             
             entity.Property(mr => mr.MaintenanceType)
                 .HasConversion<string>()
@@ -168,6 +177,9 @@ public class FleetAssistantDbContext : DbContext
         modelBuilder.Entity<InsurancePolicy>(entity =>
         {
             entity.HasKey(ip => ip.Id);
+            
+            entity.Property(ip => ip.Id)
+                .ValueGeneratedOnAdd();
             
             entity.Property(ip => ip.PolicyNumber)
                 .IsRequired()
@@ -235,6 +247,9 @@ public class FleetAssistantDbContext : DbContext
         modelBuilder.Entity<VehicleFinancial>(entity =>
         {
             entity.HasKey(vf => vf.Id);
+            
+            entity.Property(vf => vf.Id)
+                .ValueGeneratedOnAdd();
             
             entity.Property(vf => vf.FinancialType)
                 .HasConversion<string>()

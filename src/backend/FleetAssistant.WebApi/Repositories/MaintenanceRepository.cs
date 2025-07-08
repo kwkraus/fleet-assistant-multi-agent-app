@@ -7,13 +7,8 @@ namespace FleetAssistant.WebApi.Repositories;
 /// <summary>
 /// Repository implementation for MaintenanceRecord operations
 /// </summary>
-public class MaintenanceRepository : Repository<MaintenanceRecord>, IMaintenanceRepository
+public class MaintenanceRepository(FleetAssistantDbContext context, ILogger<MaintenanceRepository> logger) : Repository<MaintenanceRecord>(context, logger), IMaintenanceRepository
 {
-    public MaintenanceRepository(FleetAssistantDbContext context, ILogger<MaintenanceRepository> logger)
-        : base(context, logger)
-    {
-    }
-
     public async Task<IEnumerable<MaintenanceRecord>> GetByVehicleIdAsync(int vehicleId, int page = 1, int pageSize = 20)
     {
         try

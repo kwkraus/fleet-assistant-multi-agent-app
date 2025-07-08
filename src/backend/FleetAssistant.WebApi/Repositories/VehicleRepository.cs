@@ -7,13 +7,8 @@ namespace FleetAssistant.WebApi.Repositories;
 /// <summary>
 /// Repository implementation for Vehicle operations
 /// </summary>
-public class VehicleRepository : Repository<Vehicle>, IVehicleRepository
+public class VehicleRepository(FleetAssistantDbContext context, ILogger<VehicleRepository> logger) : Repository<Vehicle>(context, logger), IVehicleRepository
 {
-    public VehicleRepository(FleetAssistantDbContext context, ILogger<VehicleRepository> logger)
-        : base(context, logger)
-    {
-    }
-
     public async Task<Vehicle?> GetByVinAsync(string vin)
     {
         try

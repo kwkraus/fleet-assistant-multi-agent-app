@@ -1,4 +1,7 @@
 using FleetAssistant.Shared.DTOs;
+using FleetAssistant.Shared.Models;
+using FleetAssistant.WebApi.Repositories;
+using FleetAssistant.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetAssistant.WebApi.Controllers;
@@ -11,10 +14,20 @@ namespace FleetAssistant.WebApi.Controllers;
 [Produces("application/json")]
 public class FuelLogsController : ControllerBase
 {
+    private readonly IFuelLogRepository _fuelLogRepository;
+    private readonly IVehicleRepository _vehicleRepository;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<FuelLogsController> _logger;
 
-    public FuelLogsController(ILogger<FuelLogsController> logger)
+    public FuelLogsController(
+        IFuelLogRepository fuelLogRepository,
+        IVehicleRepository vehicleRepository,
+        IBlobStorageService blobStorageService,
+        ILogger<FuelLogsController> logger)
     {
+        _fuelLogRepository = fuelLogRepository;
+        _vehicleRepository = vehicleRepository;
+        _blobStorageService = blobStorageService;
         _logger = logger;
     }
 
@@ -49,10 +62,31 @@ public class FuelLogsController : ControllerBase
             _logger.LogInformation("Getting fuel logs with filters - VehicleId: {VehicleId}, StartDate: {StartDate}, EndDate: {EndDate}, FuelType: {FuelType}, Page: {Page}, PageSize: {PageSize}",
                 vehicleId, startDate, endDate, fuelType, page, pageSize);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var fuelLogs = new List<FuelLogDto>();
+            IEnumerable<FuelLog> fuelLogs;
 
-            return Ok(fuelLogs);
+            if (vehicleId.HasValue)
+            {
+                fuelLogs = await _fuelLogRepository.GetByVehicleIdAsync(vehicleId.Value, page, pageSize);
+            }
+            else if (startDate.HasValue && endDate.HasValue)
+            {
+                fuelLogs = await _fuelLogRepository.GetByDateRangeAsync(startDate.Value, endDate.Value, vehicleId, page, pageSize);
+            }
+            else
+            {
+                fuelLogs = await _fuelLogRepository.GetAllAsync();
+                fuelLogs = fuelLogs.Skip((page - 1) * pageSize).Take(pageSize);
+            }
+
+            // Apply additional filtering
+            if (!string.IsNullOrEmpty(fuelType))
+            {
+                fuelLogs = fuelLogs.Where(f => f.FuelType != null && 
+                    f.FuelType.Contains(fuelType, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var fuelLogDtos = fuelLogs.Select(MapToDto);
+            return Ok(fuelLogDtos);
         }
         catch (Exception ex)
         {
@@ -91,12 +125,26 @@ public class FuelLogsController : ControllerBase
 
             _logger.LogInformation("Getting fuel logs for vehicle {VehicleId}", vehicleId);
 
-            // TODO: Implement actual data access when Entity Framework is set up
             // Check if vehicle exists
-            // Get fuel logs for the vehicle
+            var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
 
-            var fuelLogs = new List<FuelLogDto>();
-            return Ok(fuelLogs);
+            IEnumerable<FuelLog> fuelLogs;
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                fuelLogs = await _fuelLogRepository.GetByDateRangeAsync(startDate.Value, endDate.Value, vehicleId, page, pageSize);
+            }
+            else
+            {
+                fuelLogs = await _fuelLogRepository.GetByVehicleIdAsync(vehicleId, page, pageSize);
+            }
+
+            var fuelLogDtos = fuelLogs.Select(MapToDto);
+            return Ok(fuelLogDtos);
         }
         catch (Exception ex)
         {
@@ -121,8 +169,14 @@ public class FuelLogsController : ControllerBase
         {
             _logger.LogInformation("Getting fuel log with ID: {FuelLogId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Fuel log not found" });
+            var fuelLog = await _fuelLogRepository.GetByIdAsync(id);
+            if (fuelLog == null)
+            {
+                return NotFound(new { error = "Fuel log not found" });
+            }
+
+            var fuelLogDto = MapToDto(fuelLog);
+            return Ok(fuelLogDto);
         }
         catch (Exception ex)
         {
@@ -154,28 +208,20 @@ public class FuelLogsController : ControllerBase
 
             _logger.LogInformation("Creating new fuel log for vehicle {VehicleId}", createFuelLogDto.VehicleId);
 
-            // TODO: Implement actual data access when Entity Framework is set up
             // Check if vehicle exists
-            // Calculate MPG if possible (compare with previous fuel log)
-            // Create new fuel log
-
-            var createdFuelLog = new FuelLogDto
+            var vehicle = await _vehicleRepository.GetByIdAsync(createFuelLogDto.VehicleId);
+            if (vehicle == null)
             {
-                Id = 1, // Placeholder
-                VehicleId = createFuelLogDto.VehicleId,
-                FuelDate = createFuelLogDto.FuelDate,
-                OdometerReading = createFuelLogDto.OdometerReading,
-                Gallons = createFuelLogDto.Gallons,
-                PricePerGallon = createFuelLogDto.PricePerGallon,
-                TotalCost = createFuelLogDto.TotalCost,
-                Location = createFuelLogDto.Location,
-                FuelType = createFuelLogDto.FuelType,
-                Notes = createFuelLogDto.Notes,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                return NotFound(new { error = "Vehicle not found" });
+            }
 
-            return CreatedAtAction(nameof(GetFuelLog), new { id = createdFuelLog.Id }, createdFuelLog);
+            var fuelLog = MapFromCreateDto(createFuelLogDto);
+            
+            // Calculate MPG and save the fuel log
+            var createdFuelLog = await _fuelLogRepository.CalculateAndUpdateMpgAsync(fuelLog);
+
+            var createdFuelLogDto = MapToDto(createdFuelLog);
+            return CreatedAtAction(nameof(GetFuelLog), new { id = createdFuelLogDto.Id }, createdFuelLogDto);
         }
         catch (Exception ex)
         {
@@ -208,8 +254,20 @@ public class FuelLogsController : ControllerBase
 
             _logger.LogInformation("Updating fuel log with ID: {FuelLogId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Fuel log not found" });
+            var existingFuelLog = await _fuelLogRepository.GetByIdAsync(id);
+            if (existingFuelLog == null)
+            {
+                return NotFound(new { error = "Fuel log not found" });
+            }
+
+            UpdateFromDto(existingFuelLog, updateFuelLogDto);
+            
+            // Recalculate MPG if relevant fields changed
+            var updatedFuelLog = await _fuelLogRepository.CalculateAndUpdateMpgAsync(existingFuelLog);
+            updatedFuelLog = await _fuelLogRepository.UpdateAsync(updatedFuelLog);
+
+            var updatedFuelLogDto = MapToDto(updatedFuelLog);
+            return Ok(updatedFuelLogDto);
         }
         catch (Exception ex)
         {
@@ -234,8 +292,14 @@ public class FuelLogsController : ControllerBase
         {
             _logger.LogInformation("Deleting fuel log with ID: {FuelLogId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Fuel log not found" });
+            var fuelLog = await _fuelLogRepository.GetByIdAsync(id);
+            if (fuelLog == null)
+            {
+                return NotFound(new { error = "Fuel log not found" });
+            }
+
+            await _fuelLogRepository.DeleteAsync(id);
+            return NoContent();
         }
         catch (Exception ex)
         {
@@ -265,21 +329,14 @@ public class FuelLogsController : ControllerBase
         {
             _logger.LogInformation("Getting fuel statistics for vehicle {VehicleId}", vehicleId);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var statistics = new
+            // Check if vehicle exists
+            var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId);
+            if (vehicle == null)
             {
-                VehicleId = vehicleId,
-                TotalFuelEntries = 0,
-                TotalGallons = 0.0m,
-                TotalCost = 0.0m,
-                AverageMPG = 0.0m,
-                AveragePricePerGallon = 0.0m,
-                TotalMilesDriven = 0,
-                CostPerMile = 0.0m,
-                MostFrequentFuelType = "",
-                MostFrequentLocation = ""
-            };
+                return NotFound(new { error = "Vehicle not found" });
+            }
 
+            var statistics = await _fuelLogRepository.GetVehicleStatisticsAsync(vehicleId, startDate, endDate);
             return Ok(statistics);
         }
         catch (Exception ex)
@@ -287,5 +344,83 @@ public class FuelLogsController : ControllerBase
             _logger.LogError(ex, "Error retrieving fuel statistics for vehicle {VehicleId}", vehicleId);
             return StatusCode(500, new { error = "An error occurred while retrieving fuel statistics" });
         }
+    }
+
+    /// <summary>
+    /// Maps FuelLog entity to FuelLogDto
+    /// </summary>
+    private static FuelLogDto MapToDto(FuelLog fuelLog)
+    {
+        return new FuelLogDto
+        {
+            Id = fuelLog.Id,
+            VehicleId = fuelLog.VehicleId,
+            VehicleName = fuelLog.Vehicle?.Name,
+            FuelDate = fuelLog.FuelDate,
+            OdometerReading = fuelLog.OdometerReading,
+            Gallons = fuelLog.Gallons,
+            PricePerGallon = fuelLog.PricePerGallon,
+            TotalCost = fuelLog.TotalCost,
+            Location = fuelLog.Location,
+            FuelType = fuelLog.FuelType,
+            MilesPerGallon = fuelLog.MilesPerGallon,
+            MilesDriven = fuelLog.MilesDriven,
+            Notes = fuelLog.Notes,
+            CreatedAt = fuelLog.CreatedAt,
+            UpdatedAt = fuelLog.UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Maps CreateFuelLogDto to FuelLog entity
+    /// </summary>
+    private static FuelLog MapFromCreateDto(CreateFuelLogDto dto)
+    {
+        return new FuelLog
+        {
+            VehicleId = dto.VehicleId,
+            FuelDate = dto.FuelDate,
+            OdometerReading = dto.OdometerReading,
+            Gallons = dto.Gallons,
+            PricePerGallon = dto.PricePerGallon,
+            TotalCost = dto.TotalCost,
+            Location = dto.Location,
+            FuelType = dto.FuelType,
+            Notes = dto.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Updates FuelLog entity with values from UpdateFuelLogDto
+    /// </summary>
+    private static void UpdateFromDto(FuelLog fuelLog, UpdateFuelLogDto dto)
+    {
+        if (dto.FuelDate.HasValue)
+            fuelLog.FuelDate = dto.FuelDate.Value;
+        
+        if (dto.OdometerReading.HasValue)
+            fuelLog.OdometerReading = dto.OdometerReading.Value;
+        
+        if (dto.Gallons.HasValue)
+            fuelLog.Gallons = dto.Gallons.Value;
+        
+        if (dto.PricePerGallon.HasValue)
+            fuelLog.PricePerGallon = dto.PricePerGallon.Value;
+        
+        if (dto.TotalCost.HasValue)
+            fuelLog.TotalCost = dto.TotalCost.Value;
+        
+        if (dto.Location != null)
+            fuelLog.Location = dto.Location;
+        
+        if (dto.FuelType != null)
+            fuelLog.FuelType = dto.FuelType;
+        
+        if (dto.Notes != null)
+            fuelLog.Notes = dto.Notes;
+        
+        fuelLog.UpdatedAt = DateTime.UtcNow;
     }
 }

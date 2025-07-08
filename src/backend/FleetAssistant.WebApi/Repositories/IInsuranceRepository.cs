@@ -18,6 +18,11 @@ public interface IInsuranceRepository : IRepository<InsurancePolicy>
     Task<IEnumerable<InsurancePolicy>> GetByProviderAsync(string provider, int page = 1, int pageSize = 20);
 
     /// <summary>
+    /// Gets an insurance policy by policy number
+    /// </summary>
+    Task<InsurancePolicy?> GetByPolicyNumberAsync(string policyNumber);
+
+    /// <summary>
     /// Gets active insurance policies
     /// </summary>
     Task<IEnumerable<InsurancePolicy>> GetActiveAsync(int page = 1, int pageSize = 20);

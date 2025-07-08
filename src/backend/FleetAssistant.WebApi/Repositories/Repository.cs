@@ -7,18 +7,11 @@ namespace FleetAssistant.WebApi.Repositories;
 /// Generic repository implementation for common CRUD operations
 /// </summary>
 /// <typeparam name="T">Entity type</typeparam>
-public class Repository<T> : IRepository<T> where T : class
+public class Repository<T>(FleetAssistantDbContext context, ILogger<Repository<T>> logger) : IRepository<T> where T : class
 {
-    protected readonly FleetAssistantDbContext _context;
-    protected readonly DbSet<T> _dbSet;
-    protected readonly ILogger<Repository<T>> _logger;
-
-    public Repository(FleetAssistantDbContext context, ILogger<Repository<T>> logger)
-    {
-        _context = context;
-        _dbSet = context.Set<T>();
-        _logger = logger;
-    }
+    protected readonly FleetAssistantDbContext _context = context;
+    protected readonly DbSet<T> _dbSet = context.Set<T>();
+    protected readonly ILogger<Repository<T>> _logger = logger;
 
     public virtual async Task<IEnumerable<T>> GetAllAsync(
         Func<IQueryable<T>, IQueryable<T>>? filter = null,

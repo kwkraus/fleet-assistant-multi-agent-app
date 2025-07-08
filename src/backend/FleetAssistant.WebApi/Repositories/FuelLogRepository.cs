@@ -7,13 +7,8 @@ namespace FleetAssistant.WebApi.Repositories;
 /// <summary>
 /// Repository implementation for FuelLog operations
 /// </summary>
-public class FuelLogRepository : Repository<FuelLog>, IFuelLogRepository
+public class FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogRepository> logger) : Repository<FuelLog>(context, logger), IFuelLogRepository
 {
-    public FuelLogRepository(FleetAssistantDbContext context, ILogger<FuelLogRepository> logger)
-        : base(context, logger)
-    {
-    }
-
     public async Task<IEnumerable<FuelLog>> GetByVehicleIdAsync(int vehicleId, int page = 1, int pageSize = 20)
     {
         try
@@ -157,8 +152,18 @@ public class FuelLogRepository : Repository<FuelLog>, IFuelLogRepository
                 }
             }
 
-            // Update the fuel log in the database
-            _dbSet.Update(fuelLog);
+            // Add or update the fuel log in the database
+            if (fuelLog.Id == 0)
+            {
+                // New entity - add it
+                _dbSet.Add(fuelLog);
+            }
+            else
+            {
+                // Existing entity - update it
+                _dbSet.Update(fuelLog);
+            }
+            
             await _context.SaveChangesAsync();
 
             return fuelLog;

@@ -1,5 +1,7 @@
 using FleetAssistant.Shared.DTOs;
 using FleetAssistant.Shared.Models;
+using FleetAssistant.WebApi.Repositories;
+using FleetAssistant.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetAssistant.WebApi.Controllers;
@@ -12,10 +14,20 @@ namespace FleetAssistant.WebApi.Controllers;
 [Produces("application/json")]
 public class FinancialsController : ControllerBase
 {
+    private readonly IFinancialRepository _financialRepository;
+    private readonly IVehicleRepository _vehicleRepository;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<FinancialsController> _logger;
 
-    public FinancialsController(ILogger<FinancialsController> logger)
+    public FinancialsController(
+        IFinancialRepository financialRepository,
+        IVehicleRepository vehicleRepository,
+        IBlobStorageService blobStorageService,
+        ILogger<FinancialsController> logger)
     {
+        _financialRepository = financialRepository;
+        _vehicleRepository = vehicleRepository;
+        _blobStorageService = blobStorageService;
         _logger = logger;
     }
 
@@ -52,10 +64,36 @@ public class FinancialsController : ControllerBase
             _logger.LogInformation("Getting financial records with filters - VehicleId: {VehicleId}, Type: {FinancialType}, Provider: {ProviderName}, StartDate: {StartDate}, EndDate: {EndDate}, Page: {Page}, PageSize: {PageSize}",
                 vehicleId, financialType, providerName, startDate, endDate, page, pageSize);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var financialRecords = new List<VehicleFinancialDto>();
+            IEnumerable<VehicleFinancial> financialRecords;
 
-            return Ok(financialRecords);
+            if (vehicleId.HasValue)
+            {
+                financialRecords = await _financialRepository.GetByVehicleIdAsync(vehicleId.Value, page, pageSize);
+            }
+            else if (startDate.HasValue && endDate.HasValue)
+            {
+                financialRecords = await _financialRepository.GetByDateRangeAsync(startDate.Value, endDate.Value, page, pageSize);
+            }
+            else
+            {
+                financialRecords = await _financialRepository.GetAllAsync();
+                financialRecords = financialRecords.Skip((page - 1) * pageSize).Take(pageSize);
+            }
+
+            // Apply additional filtering
+            if (financialType.HasValue)
+            {
+                financialRecords = financialRecords.Where(f => f.FinancialType == financialType.Value);
+            }
+
+            if (!string.IsNullOrEmpty(providerName))
+            {
+                financialRecords = financialRecords.Where(f => f.ProviderName != null && 
+                    f.ProviderName.Contains(providerName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var financialRecordDtos = financialRecords.Select(MapToDto);
+            return Ok(financialRecordDtos);
         }
         catch (Exception ex)
         {
@@ -96,9 +134,33 @@ public class FinancialsController : ControllerBase
 
             _logger.LogInformation("Getting financial records for vehicle {VehicleId}", vehicleId);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var financialRecords = new List<VehicleFinancialDto>();
-            return Ok(financialRecords);
+            // Check if vehicle exists
+            var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
+
+            var financialRecords = await _financialRepository.GetByVehicleIdAsync(vehicleId, page, pageSize);
+
+            // Apply additional filtering
+            if (financialType.HasValue)
+            {
+                financialRecords = financialRecords.Where(f => f.FinancialType == financialType.Value);
+            }
+
+            if (startDate.HasValue)
+            {
+                financialRecords = financialRecords.Where(f => f.StartDate >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                financialRecords = financialRecords.Where(f => f.StartDate <= endDate.Value);
+            }
+
+            var financialRecordDtos = financialRecords.Select(MapToDto);
+            return Ok(financialRecordDtos);
         }
         catch (Exception ex)
         {
@@ -126,8 +188,37 @@ public class FinancialsController : ControllerBase
         {
             _logger.LogInformation("Getting upcoming payments - VehicleId: {VehicleId}, DaysAhead: {DaysAhead}", vehicleId, daysAhead);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var upcomingPayments = new List<object>();
+            // If vehicleId is provided, check if vehicle exists
+            if (vehicleId.HasValue)
+            {
+                var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId.Value);
+                if (vehicle == null)
+                {
+                    return NotFound(new { error = "Vehicle not found" });
+                }
+            }
+
+            // Get financial records with upcoming payment dates
+            var targetDate = DateTime.UtcNow.Date.AddDays(daysAhead);
+            var allFinancials = await _financialRepository.GetAllAsync();
+            
+            var upcomingPayments = allFinancials
+                .Where(f => f.NextPaymentDate.HasValue && 
+                           f.NextPaymentDate.Value.Date <= targetDate &&
+                           f.NextPaymentDate.Value.Date >= DateTime.UtcNow.Date)
+                .Where(f => !vehicleId.HasValue || f.VehicleId == vehicleId.Value)
+                .Select(f => new
+                {
+                    f.Id,
+                    f.VehicleId,
+                    VehicleName = f.Vehicle?.Name,
+                    f.FinancialType,
+                    f.Amount,
+                    f.NextPaymentDate,
+                    f.ProviderName,
+                    DaysUntilDue = (f.NextPaymentDate!.Value.Date - DateTime.UtcNow.Date).Days
+                })
+                .OrderBy(p => p.NextPaymentDate);
 
             return Ok(upcomingPayments);
         }
@@ -154,8 +245,14 @@ public class FinancialsController : ControllerBase
         {
             _logger.LogInformation("Getting financial record with ID: {FinancialRecordId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Financial record not found" });
+            var financialRecord = await _financialRepository.GetByIdAsync(id);
+            if (financialRecord == null)
+            {
+                return NotFound(new { error = "Financial record not found" });
+            }
+
+            var financialRecordDto = MapToDto(financialRecord);
+            return Ok(financialRecordDto);
         }
         catch (Exception ex)
         {
@@ -187,32 +284,18 @@ public class FinancialsController : ControllerBase
 
             _logger.LogInformation("Creating new financial record for vehicle {VehicleId}", createVehicleFinancialDto.VehicleId);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var createdFinancialRecord = new VehicleFinancialDto
+            // Check if vehicle exists
+            var vehicle = await _vehicleRepository.GetByIdAsync(createVehicleFinancialDto.VehicleId);
+            if (vehicle == null)
             {
-                Id = 1, // Placeholder
-                VehicleId = createVehicleFinancialDto.VehicleId,
-                FinancialType = createVehicleFinancialDto.FinancialType,
-                Amount = createVehicleFinancialDto.Amount,
-                PaymentFrequency = createVehicleFinancialDto.PaymentFrequency,
-                StartDate = createVehicleFinancialDto.StartDate,
-                EndDate = createVehicleFinancialDto.EndDate,
-                NextPaymentDate = createVehicleFinancialDto.NextPaymentDate,
-                ProviderName = createVehicleFinancialDto.ProviderName,
-                AccountNumber = createVehicleFinancialDto.AccountNumber,
-                InterestRate = createVehicleFinancialDto.InterestRate,
-                RemainingBalance = createVehicleFinancialDto.RemainingBalance,
-                PurchasePrice = createVehicleFinancialDto.PurchasePrice,
-                CurrentValue = createVehicleFinancialDto.CurrentValue,
-                DepreciationMethod = createVehicleFinancialDto.DepreciationMethod,
-                DepreciationRate = createVehicleFinancialDto.DepreciationRate,
-                DocumentUrl = createVehicleFinancialDto.DocumentUrl,
-                Notes = createVehicleFinancialDto.Notes,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                return NotFound(new { error = "Vehicle not found" });
+            }
 
-            return CreatedAtAction(nameof(GetFinancialRecord), new { id = createdFinancialRecord.Id }, createdFinancialRecord);
+            var financial = MapFromCreateDto(createVehicleFinancialDto);
+            var createdFinancial = await _financialRepository.AddAsync(financial);
+
+            var createdFinancialDto = MapToDto(createdFinancial);
+            return CreatedAtAction(nameof(GetFinancialRecord), new { id = createdFinancialDto.Id }, createdFinancialDto);
         }
         catch (Exception ex)
         {
@@ -245,8 +328,17 @@ public class FinancialsController : ControllerBase
 
             _logger.LogInformation("Updating financial record with ID: {FinancialRecordId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Financial record not found" });
+            var existingFinancial = await _financialRepository.GetByIdAsync(id);
+            if (existingFinancial == null)
+            {
+                return NotFound(new { error = "Financial record not found" });
+            }
+
+            UpdateFromDto(existingFinancial, updateVehicleFinancialDto);
+            var updatedFinancial = await _financialRepository.UpdateAsync(existingFinancial);
+
+            var updatedFinancialDto = MapToDto(updatedFinancial);
+            return Ok(updatedFinancialDto);
         }
         catch (Exception ex)
         {
@@ -271,8 +363,14 @@ public class FinancialsController : ControllerBase
         {
             _logger.LogInformation("Deleting financial record with ID: {FinancialRecordId}", id);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            return NotFound(new { error = "Financial record not found" });
+            var financialRecord = await _financialRepository.GetByIdAsync(id);
+            if (financialRecord == null)
+            {
+                return NotFound(new { error = "Financial record not found" });
+            }
+
+            await _financialRepository.DeleteAsync(id);
+            return NoContent();
         }
         catch (Exception ex)
         {
@@ -302,23 +400,14 @@ public class FinancialsController : ControllerBase
         {
             _logger.LogInformation("Getting financial statistics for vehicle {VehicleId}", vehicleId);
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var statistics = new
+            // Check if vehicle exists
+            var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId);
+            if (vehicle == null)
             {
-                VehicleId = vehicleId,
-                TotalFinancialRecords = 0,
-                TotalOutstandingBalance = 0.0m,
-                MonthlyPaymentAmount = 0.0m,
-                TotalPaidAmount = 0.0m,
-                PurchasePrice = 0.0m,
-                CurrentValue = 0.0m,
-                TotalDepreciation = 0.0m,
-                DepreciationRate = 0.0m,
-                FinancialRecordsByType = new Dictionary<string, object>(),
-                NextPaymentDate = (DateTime?)null,
-                NextPaymentAmount = 0.0m
-            };
+                return NotFound(new { error = "Vehicle not found" });
+            }
 
+            var statistics = await _financialRepository.GetFinancialStatsAsync(vehicleId);
             return Ok(statistics);
         }
         catch (Exception ex)
@@ -348,20 +437,37 @@ public class FinancialsController : ControllerBase
             var calculationDate = asOfDate ?? DateTime.Today;
             _logger.LogInformation("Calculating depreciation for vehicle {VehicleId} as of {AsOfDate}", vehicleId, calculationDate);
 
-            // TODO: Implement actual depreciation calculation when Entity Framework is set up
+            // Check if vehicle exists
+            var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return NotFound(new { error = "Vehicle not found" });
+            }
+
+            // Get vehicle financial records to find purchase price and depreciation info
+            var financialRecords = await _financialRepository.GetByVehicleIdAsync(vehicleId);
+            var purchaseRecord = financialRecords.FirstOrDefault(f => f.FinancialType == FinancialType.Purchase);
+            
+            if (purchaseRecord == null)
+            {
+                return BadRequest(new { error = "Vehicle purchase record not found for depreciation calculation" });
+            }
+
+            // Simple depreciation calculation (this could be enhanced with more sophisticated methods)
+            var purchasePrice = purchaseRecord.PurchasePrice ?? purchaseRecord.Amount;
+            var currentValue = purchaseRecord.CurrentValue ?? purchasePrice;
+            var totalDepreciation = purchasePrice - currentValue;
+            var depreciationPercentage = purchasePrice > 0 ? (totalDepreciation / purchasePrice) * 100 : 0;
+
             var depreciation = new
             {
                 VehicleId = vehicleId,
                 AsOfDate = calculationDate,
-                PurchasePrice = 0.0m,
-                CurrentValue = 0.0m,
-                TotalDepreciation = 0.0m,
-                DepreciationPercentage = 0.0m,
-                YearsOwned = 0.0,
-                AnnualDepreciationAmount = 0.0m,
-                MonthlyDepreciationAmount = 0.0m,
-                DepreciationMethod = "",
-                RemainingUsefulLife = 0.0
+                PurchasePrice = purchasePrice,
+                CurrentValue = currentValue,
+                TotalDepreciation = totalDepreciation,
+                DepreciationPercentage = depreciationPercentage,
+                DepreciationMethod = purchaseRecord.DepreciationMethod?.ToString() ?? "Not specified"
             };
 
             return Ok(depreciation);
@@ -386,22 +492,7 @@ public class FinancialsController : ControllerBase
         {
             _logger.LogInformation("Getting fleet financial summary");
 
-            // TODO: Implement actual data access when Entity Framework is set up
-            var summary = new
-            {
-                TotalFleetValue = 0.0m,
-                TotalOutstandingLiabilities = 0.0m,
-                TotalMonthlyPayments = 0.0m,
-                TotalAnnualDepreciation = 0.0m,
-                FleetEquity = 0.0m,
-                AverageVehicleValue = 0.0m,
-                TotalVehicles = 0,
-                VehiclesByFinancialType = new Dictionary<string, int>(),
-                UpcomingPayments30Days = 0.0m,
-                TotalRegistrationFees = 0.0m,
-                TotalInsurancePremiums = 0.0m
-            };
-
+            var summary = await _financialRepository.GetFleetFinancialSummaryAsync();
             return Ok(summary);
         }
         catch (Exception ex)
@@ -409,5 +500,121 @@ public class FinancialsController : ControllerBase
             _logger.LogError(ex, "Error retrieving fleet financial summary");
             return StatusCode(500, new { error = "An error occurred while retrieving fleet financial summary" });
         }
+    }
+
+    /// <summary>
+    /// Maps VehicleFinancial entity to VehicleFinancialDto
+    /// </summary>
+    private static VehicleFinancialDto MapToDto(VehicleFinancial financial)
+    {
+        return new VehicleFinancialDto
+        {
+            Id = financial.Id,
+            VehicleId = financial.VehicleId,
+            VehicleName = financial.Vehicle?.Name,
+            FinancialType = financial.FinancialType,
+            Amount = financial.Amount,
+            PaymentFrequency = financial.PaymentFrequency,
+            StartDate = financial.StartDate,
+            EndDate = financial.EndDate,
+            NextPaymentDate = financial.NextPaymentDate,
+            ProviderName = financial.ProviderName,
+            AccountNumber = financial.AccountNumber,
+            InterestRate = financial.InterestRate,
+            RemainingBalance = financial.RemainingBalance,
+            PurchasePrice = financial.PurchasePrice,
+            CurrentValue = financial.CurrentValue,
+            DepreciationMethod = financial.DepreciationMethod,
+            DepreciationRate = financial.DepreciationRate,
+            DocumentUrl = financial.DocumentUrl,
+            Notes = financial.Notes,
+            CreatedAt = financial.CreatedAt,
+            UpdatedAt = financial.UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Maps CreateVehicleFinancialDto to VehicleFinancial entity
+    /// </summary>
+    private static VehicleFinancial MapFromCreateDto(CreateVehicleFinancialDto dto)
+    {
+        return new VehicleFinancial
+        {
+            VehicleId = dto.VehicleId,
+            FinancialType = dto.FinancialType,
+            Amount = dto.Amount,
+            PaymentFrequency = dto.PaymentFrequency,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            NextPaymentDate = dto.NextPaymentDate,
+            ProviderName = dto.ProviderName,
+            AccountNumber = dto.AccountNumber,
+            InterestRate = dto.InterestRate,
+            RemainingBalance = dto.RemainingBalance,
+            PurchasePrice = dto.PurchasePrice,
+            CurrentValue = dto.CurrentValue,
+            DepreciationMethod = dto.DepreciationMethod,
+            DepreciationRate = dto.DepreciationRate,
+            DocumentUrl = dto.DocumentUrl,
+            Notes = dto.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Updates VehicleFinancial entity with values from UpdateVehicleFinancialDto
+    /// </summary>
+    private static void UpdateFromDto(VehicleFinancial financial, UpdateVehicleFinancialDto dto)
+    {
+        if (dto.FinancialType.HasValue)
+            financial.FinancialType = dto.FinancialType.Value;
+        
+        if (dto.Amount.HasValue)
+            financial.Amount = dto.Amount.Value;
+        
+        if (dto.PaymentFrequency.HasValue)
+            financial.PaymentFrequency = dto.PaymentFrequency;
+        
+        if (dto.StartDate.HasValue)
+            financial.StartDate = dto.StartDate.Value;
+        
+        if (dto.EndDate.HasValue)
+            financial.EndDate = dto.EndDate;
+        
+        if (dto.NextPaymentDate.HasValue)
+            financial.NextPaymentDate = dto.NextPaymentDate;
+        
+        if (dto.ProviderName != null)
+            financial.ProviderName = dto.ProviderName;
+        
+        if (dto.AccountNumber != null)
+            financial.AccountNumber = dto.AccountNumber;
+        
+        if (dto.InterestRate.HasValue)
+            financial.InterestRate = dto.InterestRate;
+        
+        if (dto.RemainingBalance.HasValue)
+            financial.RemainingBalance = dto.RemainingBalance;
+        
+        if (dto.PurchasePrice.HasValue)
+            financial.PurchasePrice = dto.PurchasePrice;
+        
+        if (dto.CurrentValue.HasValue)
+            financial.CurrentValue = dto.CurrentValue;
+        
+        if (dto.DepreciationMethod.HasValue)
+            financial.DepreciationMethod = dto.DepreciationMethod;
+        
+        if (dto.DepreciationRate.HasValue)
+            financial.DepreciationRate = dto.DepreciationRate;
+        
+        if (dto.DocumentUrl != null)
+            financial.DocumentUrl = dto.DocumentUrl;
+        
+        if (dto.Notes != null)
+            financial.Notes = dto.Notes;
+        
+        financial.UpdatedAt = DateTime.UtcNow;
     }
 }
