@@ -1,6 +1,9 @@
 using FleetAssistant.Shared.Services;
+using FleetAssistant.WebApi.Data;
 using FleetAssistant.WebApi.Options;
+using FleetAssistant.WebApi.Repositories;
 using FleetAssistant.WebApi.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 
@@ -8,6 +11,28 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
+
+// Add Entity Framework
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    // Use in-memory database for development/testing if no connection string is provided
+    builder.Services.AddDbContext<FleetAssistantDbContext>(options =>
+        options.UseInMemoryDatabase("FleetAssistantInMemoryDb"));
+}
+else
+{
+    builder.Services.AddDbContext<FleetAssistantDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
+
+// Register repositories
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IFuelLogRepository, FuelLogRepository>();
+builder.Services.AddScoped<IMaintenanceRepository, MaintenanceRepository>();
+builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
+builder.Services.AddScoped<IFinancialRepository, FinancialRepository>();
 
 // Add Application Insights
 builder.Services.AddApplicationInsightsTelemetry();
