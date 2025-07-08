@@ -113,7 +113,8 @@ export function ChatInput({
                   className={cn(
                     "min-h-[44px] max-h-[120px] resize-none pr-12 md:pr-16",
                     "text-sm md:text-base",
-                    "placeholder:text-muted-foreground/70"
+                    "placeholder:text-muted-foreground/70",
+                    "bg-white dark:bg-gray-100"
                   )}
                   style={{ 
                     height: 'auto'
