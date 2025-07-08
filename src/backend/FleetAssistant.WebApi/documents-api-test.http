@@ -1,0 +1,287 @@
+### Fleet Assistant API - Document Management Tests
+### Base URL
+@baseUrl = https://localhost:7000
+@baseUrlHttp = http://localhost:5000
+
+### Test file paths (update these with actual file paths on your system)
+@testPdfFile = C:\temp\test-document.pdf
+@testImageFile = C:\temp\test-image.jpg
+
+################################################################################
+### Document Upload Tests
+################################################################################
+
+### 1. Upload a single document (general)
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test-document.pdf"
+Content-Type: application/pdf
+
+< {{testPdfFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 2. Upload a document with category
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="maintenance-invoice.pdf"
+Content-Type: application/pdf
+
+< {{testPdfFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+maintenance
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 3. Upload a document for specific vehicle
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="vehicle-registration.pdf"
+Content-Type: application/pdf
+
+< {{testPdfFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+vehicle
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="vehicleId"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 4. Upload multiple documents
+POST {{baseUrl}}/api/documents/upload-multiple
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="document1.pdf"
+Content-Type: application/pdf
+
+< {{testPdfFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="document2.jpg"
+Content-Type: image/jpeg
+
+< {{testImageFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+insurance
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="vehicleId"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+################################################################################
+### Document Management Tests
+################################################################################
+
+### 5. List all documents in default container
+GET {{baseUrl}}/api/documents/list
+
+###
+
+### 6. List documents in specific container
+GET {{baseUrl}}/api/documents/list?containerName=maintenance-documents
+
+###
+
+### 7. List documents with prefix filter
+GET {{baseUrl}}/api/documents/list?containerName=vehicle-documents&prefix=vehicle_1_
+
+###
+
+### 8. Check if document exists (replace with actual blob name)
+HEAD {{baseUrl}}/api/documents/fleet-documents/test-document_20240101_120000_abcd1234.pdf
+
+###
+
+### 9. Download document (replace with actual container and blob name)
+GET {{baseUrl}}/api/documents/download/fleet-documents/test-document_20240101_120000_abcd1234.pdf
+
+###
+
+### 10. Delete document (replace with actual container and blob name)
+DELETE {{baseUrl}}/api/documents/fleet-documents/test-document_20240101_120000_abcd1234.pdf
+
+################################################################################
+### Error Handling Tests
+################################################################################
+
+### 11. Upload without file
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 12. Upload file that's too large (if you have a large file to test)
+# POST {{baseUrl}}/api/documents/upload
+# Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+# 
+# ------WebKitFormBoundary7MA4YWxkTrZu0gW
+# Content-Disposition: form-data; name="file"; filename="large-file.pdf"
+# Content-Type: application/pdf
+# 
+# < path/to/large/file.pdf
+# ------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 13. Download non-existent document
+GET {{baseUrl}}/api/documents/download/fleet-documents/non-existent-file.pdf
+
+###
+
+### 14. Delete non-existent document
+DELETE {{baseUrl}}/api/documents/fleet-documents/non-existent-file.pdf
+
+################################################################################
+### Category-specific Upload Tests
+################################################################################
+
+### 15. Upload maintenance document
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="oil-change-receipt.pdf"
+Content-Type: application/pdf
+
+< {{testPdfFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+maintenance
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="vehicleId"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 16. Upload insurance document
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="insurance-policy.pdf"
+Content-Type: application/pdf
+
+< {{testPdfFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+insurance
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="vehicleId"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 17. Upload fuel receipt
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="fuel-receipt.jpg"
+Content-Type: image/jpeg
+
+< {{testImageFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+fuel
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="vehicleId"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 18. Upload financial document
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="loan-agreement.pdf"
+Content-Type: application/pdf
+
+< {{testPdfFile}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+financial
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="vehicleId"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+################################################################################
+### Container-specific Listing Tests
+################################################################################
+
+### 19. List maintenance documents
+GET {{baseUrl}}/api/documents/list?containerName=maintenance-documents
+
+###
+
+### 20. List insurance documents
+GET {{baseUrl}}/api/documents/list?containerName=insurance-documents
+
+###
+
+### 21. List vehicle documents
+GET {{baseUrl}}/api/documents/list?containerName=vehicle-documents
+
+###
+
+### 22. List fuel documents
+GET {{baseUrl}}/api/documents/list?containerName=fuel-documents
+
+###
+
+### 23. List financial documents
+GET {{baseUrl}}/api/documents/list?containerName=financial-documents
+
+################################################################################
+### Notes
+################################################################################
+
+# To use these tests:
+# 1. Update the @testPdfFile and @testImageFile variables with actual file paths
+# 2. Make sure the Fleet Assistant API is running
+# 3. Have Azure Storage Emulator running or configure real Azure Storage
+# 4. Run individual tests or groups of tests
+# 5. Update blob names in download/delete tests based on upload responses
+#
+# Container naming convention:
+# - general documents: fleet-documents
+# - maintenance documents: maintenance-documents  
+# - insurance documents: insurance-documents
+# - vehicle documents: vehicle-documents
+# - fuel documents: fuel-documents
+# - financial documents: financial-documents
+#
+# Blob naming convention:
+# [vehicle_{vehicleId}_][category_]originalName_timestamp_uniqueId.ext

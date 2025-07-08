@@ -6,6 +6,7 @@ using FleetAssistant.WebApi.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,18 @@ builder.Services.AddScoped<IFuelLogRepository, FuelLogRepository>();
 builder.Services.AddScoped<IMaintenanceRepository, MaintenanceRepository>();
 builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
 builder.Services.AddScoped<IFinancialRepository, FinancialRepository>();
+
+// Configure Blob Storage
+builder.Services.Configure<BlobStorageOptions>(
+    builder.Configuration.GetSection(BlobStorageOptions.SectionName));
+
+// Register Blob Storage services
+builder.Services.AddSingleton(provider =>
+{
+    var blobStorageOptions = builder.Configuration.GetSection(BlobStorageOptions.SectionName).Get<BlobStorageOptions>();
+    return new BlobServiceClient(blobStorageOptions?.ConnectionString ?? "UseDevelopmentStorage=true");
+});
+builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 
 // Add Application Insights
 builder.Services.AddApplicationInsightsTelemetry();
