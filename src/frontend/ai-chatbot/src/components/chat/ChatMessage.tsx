@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { formatTime } from "@/lib/utils"
 
@@ -262,14 +263,20 @@ export function ChatMessageLoading() {
       <div className="flex max-w-[85%] md:max-w-[75%] flex-col items-start">
         <Card className="bg-card border-border">
           <CardContent className="p-3 md:p-4">
-            <div className="flex items-center space-x-2">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-              <span className="text-sm text-muted-foreground">AI is thinking...</span>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex space-x-1 cursor-default">
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Thinking...</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardContent>
         </Card>
       </div>
