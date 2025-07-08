@@ -25,7 +25,11 @@ else
 {
     builder.Services.AddDbContext<FleetAssistantDbContext>(options =>
         options.UseSqlServer(connectionString));
+
 }
+
+// Add ASP.NET Core Health Checks
+builder.Services.AddHealthChecks().AddDbContextCheck<FleetAssistantDbContext>();
 
 // Register repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -133,6 +137,9 @@ app.UseCors("AllowAll");
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map health check endpoint
+app.MapHealthChecks("/healthz");
 
 app.Run();
 
