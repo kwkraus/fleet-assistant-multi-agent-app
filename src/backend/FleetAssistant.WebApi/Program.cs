@@ -7,6 +7,7 @@ using FleetAssistant.WebApi.Repositories;
 using FleetAssistant.WebApi.Services;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text.Json;
@@ -88,6 +89,22 @@ builder.Services.AddSwaggerGen(c =>
         Type = "string",
         Format = "text/event-stream",
         Description = "Server-Sent Events stream"
+    });
+
+    // Add support for custom operation IDs
+    // This is compliant with Foundry's requirement for operation IDs to be lowercase
+    c.CustomOperationIds(apiDesc =>
+    {
+        var controller = apiDesc.ActionDescriptor.RouteValues["controller"];
+        var action = apiDesc.ActionDescriptor.RouteValues["action"];
+        return $"{controller}_{action}".ToLowerInvariant(); // compliant with Foundry
+    });
+
+    // Add servers section with absolute base URL
+    // This is required for Foundry Agent Service compatibility
+    c.AddServer(new OpenApiServer
+    {
+        Url = "https://fleetassistant.azurewebsites.net"
     });
 });
 
