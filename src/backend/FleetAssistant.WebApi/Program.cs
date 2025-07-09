@@ -7,7 +7,6 @@ using FleetAssistant.WebApi.Repositories;
 using FleetAssistant.WebApi.Services;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text.Json;
@@ -169,7 +168,8 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
         var result = JsonSerializer.Serialize(new
         {
             status = report.Status.ToString(),
-            checks = report.Entries.Select(e => new {
+            checks = report.Entries.Select(e => new
+            {
                 name = e.Key,
                 status = e.Value.Status.ToString(),
                 description = e.Value.Description

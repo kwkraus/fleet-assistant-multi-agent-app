@@ -8,7 +8,7 @@ namespace FleetAssistant.WebApi.Repositories;
 /// Repository implementation for FuelLog operations
 /// </summary>
 public class FuelLogRepository(
-    FleetAssistantDbContext context, 
+    FleetAssistantDbContext context,
     ILogger<FuelLogRepository> logger) : Repository<FuelLog>(context, logger), IFuelLogRepository
 {
     public async Task<IEnumerable<FuelLog>> GetByVehicleIdAsync(int vehicleId, int page = 1, int pageSize = 20)
