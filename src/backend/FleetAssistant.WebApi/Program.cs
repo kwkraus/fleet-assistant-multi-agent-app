@@ -104,7 +104,8 @@ builder.Services.AddSwaggerGen(c =>
     // This is required for Foundry Agent Service compatibility
     c.AddServer(new OpenApiServer
     {
-        Url = "https://fleetassistant.azurewebsites.net"
+        // add url based on the host that the app is running on
+        Url = builder.Configuration.GetValue<string>("OpenAPIBaseUrl") ?? "https://localhost:5001"
     });
 });
 
