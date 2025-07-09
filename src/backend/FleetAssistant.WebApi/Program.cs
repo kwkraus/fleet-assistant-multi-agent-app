@@ -1,12 +1,15 @@
 using Azure.Storage.Blobs;
 using FleetAssistant.Shared.Services;
 using FleetAssistant.WebApi.Data;
+using FleetAssistant.WebApi.HealthChecks;
 using FleetAssistant.WebApi.Options;
 using FleetAssistant.WebApi.Repositories;
 using FleetAssistant.WebApi.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +32,9 @@ else
 }
 
 // Add ASP.NET Core Health Checks
-builder.Services.AddHealthChecks().AddDbContextCheck<FleetAssistantDbContext>();
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<FleetAssistantDbContext>(name: "EntityFramework", tags: ["health", "db"])
+    .AddCheck<FoundryHealthCheck>(name: "FoundryHealthCheck", tags: ["health", "foundry"]);
 
 // Register repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -138,8 +143,23 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Map health check endpoint
-app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
 
 app.Run();
 
