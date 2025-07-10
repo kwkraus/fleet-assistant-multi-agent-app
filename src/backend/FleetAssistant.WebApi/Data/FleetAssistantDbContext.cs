@@ -55,10 +55,10 @@ public class FleetAssistantDbContext(DbContextOptions<FleetAssistantDbContext> o
                 .HasConversion<string>();
 
             entity.Property(v => v.CreatedAt)
-                .HasDefaultValueSql("GETUTCDATE()");
+                .IsRequired();
 
             entity.Property(v => v.UpdatedAt)
-                .HasDefaultValueSql("GETUTCDATE()");
+                .IsRequired();
 
             // Create unique index on VIN
             entity.HasIndex(v => v.Vin)
