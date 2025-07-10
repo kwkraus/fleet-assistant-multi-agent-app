@@ -1,13 +1,60 @@
+using Azure.Storage.Blobs;
 using FleetAssistant.Shared.Services;
+using FleetAssistant.WebApi.Data;
+using FleetAssistant.WebApi.HealthChecks;
 using FleetAssistant.WebApi.Options;
+using FleetAssistant.WebApi.Repositories;
 using FleetAssistant.WebApi.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
+
+// Add Entity Framework
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    // Use in-memory database for development/testing if no connection string is provided
+    builder.Services.AddDbContext<FleetAssistantDbContext>(options =>
+        options.UseInMemoryDatabase("FleetAssistantInMemoryDb"));
+}
+else
+{
+    builder.Services.AddDbContext<FleetAssistantDbContext>(options =>
+        options.UseSqlServer(connectionString));
+
+}
+
+// Add ASP.NET Core Health Checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<FleetAssistantDbContext>(name: "EntityFramework", tags: ["health", "db"])
+    .AddCheck<FoundryHealthCheck>(name: "FoundryHealthCheck", tags: ["health", "foundry"]);
+
+// Register repositories
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IFuelLogRepository, FuelLogRepository>();
+builder.Services.AddScoped<IMaintenanceRepository, MaintenanceRepository>();
+builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
+builder.Services.AddScoped<IFinancialRepository, FinancialRepository>();
+
+// Configure Blob Storage
+builder.Services.Configure<BlobStorageOptions>(
+    builder.Configuration.GetSection(BlobStorageOptions.SectionName));
+
+// Register Blob Storage services
+builder.Services.AddSingleton(provider =>
+{
+    var blobStorageOptions = builder.Configuration.GetSection(BlobStorageOptions.SectionName).Get<BlobStorageOptions>();
+    return new BlobServiceClient(blobStorageOptions?.ConnectionString ?? "UseDevelopmentStorage=true");
+});
+builder.Services.AddScoped<IStorageService, BlobStorageService>();
 
 // Add Application Insights
 builder.Services.AddApplicationInsightsTelemetry();
@@ -41,6 +88,23 @@ builder.Services.AddSwaggerGen(c =>
         Type = "string",
         Format = "text/event-stream",
         Description = "Server-Sent Events stream"
+    });
+
+    // Add support for custom operation IDs
+    // This is compliant with Foundry's requirement for operation IDs to be lowercase
+    c.CustomOperationIds(apiDesc =>
+    {
+        var controller = apiDesc.ActionDescriptor.RouteValues["controller"];
+        var action = apiDesc.ActionDescriptor.RouteValues["action"];
+        return $"{controller}_{action}".ToLowerInvariant(); // compliant with Foundry
+    });
+
+    // Add servers section with absolute base URL
+    // This is required for Foundry Agent Service compatibility
+    c.AddServer(new OpenApiServer
+    {
+        // add url based on the host that the app is running on
+        Url = builder.Configuration.GetValue<string>("OpenAPIBaseUrl") ?? "https://localhost:5001"
     });
 });
 
@@ -95,6 +159,25 @@ app.UseCors("AllowAll");
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
 
 app.Run();
 
