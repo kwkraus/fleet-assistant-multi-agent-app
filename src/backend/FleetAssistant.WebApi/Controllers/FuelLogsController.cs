@@ -264,7 +264,6 @@ public class FuelLogsController : ControllerBase
 
             // Recalculate MPG if relevant fields changed
             var updatedFuelLog = await _fuelLogRepository.CalculateAndUpdateMpgAsync(existingFuelLog);
-            updatedFuelLog = await _fuelLogRepository.UpdateAsync(updatedFuelLog);
 
             var updatedFuelLogDto = MapToDto(updatedFuelLog);
             return Ok(updatedFuelLogDto);
