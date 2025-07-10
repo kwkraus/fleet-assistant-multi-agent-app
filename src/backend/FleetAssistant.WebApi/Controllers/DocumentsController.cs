@@ -1,4 +1,4 @@
-using FleetAssistant.WebApi.Services;
+using FleetAssistant.WebApi.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetAssistant.WebApi.Controllers;

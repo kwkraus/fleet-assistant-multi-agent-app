@@ -1,4 +1,5 @@
 using FleetAssistant.WebApi.Data;
+using FleetAssistant.WebApi.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace FleetAssistant.WebApi.Repositories;

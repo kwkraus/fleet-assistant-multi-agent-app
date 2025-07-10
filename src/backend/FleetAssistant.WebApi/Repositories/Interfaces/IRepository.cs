@@ -1,4 +1,4 @@
-namespace FleetAssistant.WebApi.Repositories;
+namespace FleetAssistant.WebApi.Repositories.Interfaces;
 
 /// <summary>
 /// Generic repository interface for common CRUD operations
