@@ -313,7 +313,7 @@ public class InsuranceController : ControllerBase
 
             // Add vehicle to policy (this would need to be implemented in the repository)
             // For now, this is a simplified implementation
-            return NotFound(new { error = "Vehicle-policy management not fully implemented yet" });
+            return StatusCode(501, new { error = "Vehicle-policy management not fully implemented yet" });
         }
         catch (Exception ex)
         {
