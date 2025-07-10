@@ -1,6 +1,6 @@
 using FleetAssistant.Shared.Models;
 
-namespace FleetAssistant.WebApi.Repositories;
+namespace FleetAssistant.WebApi.Repositories.Interfaces;
 
 /// <summary>
 /// Repository interface for insurance policy operations

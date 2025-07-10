@@ -1,4 +1,4 @@
-namespace FleetAssistant.WebApi.Services;
+namespace FleetAssistant.WebApi.Services.Interfaces;
 
 /// <summary>
 /// Represents the result of a blob storage operation

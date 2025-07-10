@@ -1,7 +1,7 @@
 using FleetAssistant.Shared.DTOs;
 using FleetAssistant.Shared.Models;
-using FleetAssistant.WebApi.Repositories;
-using FleetAssistant.WebApi.Services;
+using FleetAssistant.WebApi.Repositories.Interfaces;
+using FleetAssistant.WebApi.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetAssistant.WebApi.Controllers;

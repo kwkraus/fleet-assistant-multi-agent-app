@@ -2,7 +2,7 @@ using FleetAssistant.Shared.Models;
 using FleetAssistant.WebApi.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace FleetAssistant.WebApi.Repositories;
+namespace FleetAssistant.WebApi.Repositories.Interfaces;
 
 /// <summary>
 /// Repository implementation for InsurancePolicy operations

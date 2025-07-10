@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using FleetAssistant.WebApi.Options;
+using FleetAssistant.WebApi.Services.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace FleetAssistant.WebApi.Services;
