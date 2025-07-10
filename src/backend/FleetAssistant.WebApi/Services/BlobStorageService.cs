@@ -277,7 +277,7 @@ public class BlobStorageService(
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFileName);
         var extension = Path.GetExtension(originalFileName);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-        var uniqueId = Guid.NewGuid().ToString("N")[..8];
+        var uniqueId = Guid.NewGuid().ToString("N");
 
         return $"{fileNameWithoutExtension}_{timestamp}_{uniqueId}{extension}";
     }
