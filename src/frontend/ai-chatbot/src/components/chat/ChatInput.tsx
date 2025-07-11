@@ -9,12 +9,15 @@ import { Container } from "@/components/layout/Container"
 import { QUICK_PROMPTS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/useBreakpoint"
+import { FileUploadZone } from "../files/FileUploadZone"
+import { useFileUpload } from "../../hooks/useFileUpload"
+import { FileAttachment } from "../../types/fileTypes"
 
 interface ChatInputProps {
   input: string
   isLoading: boolean
   onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
-  onSend: (e: FormEvent<HTMLFormElement>) => void
+  onSend: (e: FormEvent<HTMLFormElement>, attachments?: FileAttachment[]) => void
   className?: string
 }
 
@@ -28,6 +31,12 @@ export function ChatInput({
   const isMobile = useIsMobile()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [rows, setRows] = useState(1)
+  const [showFileUpload, setShowFileUpload] = useState(false)
+  
+  // File upload hook
+  const fileUploadHook = useFileUpload({
+    maxFiles: 5
+  })
 
   // Auto-resize textarea
   useEffect(() => {
@@ -47,10 +56,19 @@ export function ChatInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (input.trim() && !isLoading) {
+      if ((input.trim() || fileUploadHook.attachments.length > 0) && !isLoading) {
         const formEvent = new Event('submit', { bubbles: true, cancelable: true }) as unknown as FormEvent<HTMLFormElement>
-        onSend(formEvent)
+        handleSubmit(formEvent)
       }
+    }
+  }
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if ((input.trim() || fileUploadHook.attachments.length > 0) && !isLoading) {
+      onSend(e, fileUploadHook.attachments)
+      // Clear attachments after sending
+      fileUploadHook.clearFiles()
     }
   }
 
@@ -62,7 +80,7 @@ export function ChatInput({
     }, 0)
   }
 
-  const canSend = input.trim() && !isLoading
+  const canSend = (input.trim() || fileUploadHook.attachments.length > 0) && !isLoading
 
   return (
     <div className={cn(
@@ -95,7 +113,27 @@ export function ChatInput({
           )}
 
           {/* Input Form */}
-          <form onSubmit={onSend} className="relative">
+          <form onSubmit={handleSubmit} className="relative">
+            {/* File Upload Zone */}
+            {showFileUpload && (
+              <div className="mb-3 p-3 border rounded-lg bg-background/50">
+                <FileUploadZone 
+                  attachments={fileUploadHook.attachments}
+                  isDragActive={fileUploadHook.isDragActive}
+                  onFileInputChange={(e) => {
+                    if (e.target.files) {
+                      fileUploadHook.addFiles(Array.from(e.target.files))
+                    }
+                  }}
+                  onRemoveFile={fileUploadHook.removeFile}
+                  onClearAll={fileUploadHook.clearFiles}
+                  dragHandlers={fileUploadHook.dragHandlers}
+                  canAddMoreFiles={fileUploadHook.attachments.length < 5}
+                  maxFiles={5}
+                />
+              </div>
+            )}
+
             <div className="relative flex items-end space-x-2 md:space-x-3">
               {/* Main Input Area */}
               <div className="relative flex-1">
@@ -122,17 +160,33 @@ export function ChatInput({
 
                 {/* Input Actions */}
                 <div className="absolute right-2 bottom-2 flex items-center space-x-1">
-                  {/* Attachment Button (Future) */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-50 cursor-not-allowed"
-                    disabled
-                  >
-                    <Paperclip className="h-4 w-4" />
-                    <span className="sr-only">Attach file (Coming soon)</span>
-                  </Button>
+                  {/* Attachment Button */}
+                  <div className="relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowFileUpload(!showFileUpload)}
+                      className={cn(
+                        "h-8 w-8 text-muted-foreground hover:text-foreground transition-colors",
+                        showFileUpload && "text-foreground",
+                        fileUploadHook.attachments.length > 0 && "text-primary"
+                      )}
+                    >
+                      <Paperclip className="h-4 w-4" />
+                      <span className="sr-only">
+                        {showFileUpload ? "Hide file upload" : "Attach files"}
+                      </span>
+                    </Button>
+                    {fileUploadHook.attachments.length > 0 && (
+                      <Badge 
+                        variant="secondary" 
+                        className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
+                      >
+                        {fileUploadHook.attachments.length}
+                      </Badge>
+                    )}
+                  </div>
 
                   {/* Voice Input Button (Future) */}
                   <Button

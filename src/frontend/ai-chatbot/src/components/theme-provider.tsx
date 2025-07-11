@@ -30,29 +30,32 @@ export function ThemeProvider({
   storageKey = "fleet-assistant-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = React.useState<Theme>(
-    () => {
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem(storageKey) as Theme
-        if (stored === "light" || stored === "dark") {
-          return stored
-        }
-      }
-      return defaultTheme
+  const [theme, setTheme] = React.useState<Theme>(defaultTheme)
+  const [mounted, setMounted] = React.useState(false)
+
+  // Handle hydration
+  React.useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem(storageKey) as Theme
+    if (stored === "light" || stored === "dark") {
+      setTheme(stored)
     }
-  )
+  }, [storageKey])
 
   React.useEffect(() => {
+    if (!mounted) return
+    
     const root = window.document.documentElement
-
     root.classList.remove("light", "dark")
     root.classList.add(theme)
-  }, [theme])
+  }, [theme, mounted])
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
+      if (mounted) {
+        localStorage.setItem(storageKey, theme)
+      }
       setTheme(theme)
     },
   }

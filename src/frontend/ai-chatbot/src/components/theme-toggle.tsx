@@ -14,6 +14,12 @@ interface ThemeToggleProps {
 
 export function ThemeToggle({ className, size = "default" }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  // Prevent hydration mismatch
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const cycleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light")
@@ -25,6 +31,20 @@ export function ThemeToggle({ className, size = "default" }: ThemeToggleProps) {
 
   const getLabel = () => {
     return `Switch to ${theme === "light" ? "dark" : "light"} mode`
+  }
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <Button
+        variant="ghost"
+        size={size === "sm" ? "sm" : size === "lg" ? "lg" : "icon"}
+        className={cn("transition-colors", className)}
+        disabled
+      >
+        <Sun className="h-4 w-4" />
+      </Button>
+    )
   }
 
   return (

@@ -5,12 +5,14 @@ import { ChatHeader } from './chat/ChatHeader';
 import { ChatMessageList } from './chat/ChatMessageList';
 import { ChatInput } from './chat/ChatInput';
 import { PageLayout } from './layout/PageLayout';
+import { FileAttachment } from '../types/fileTypes';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   createdAt?: Date;
+  attachments?: FileAttachment[];
 }
 
 interface SSEEventData {
@@ -43,10 +45,10 @@ export default function Chat() {
     console.log('Conversation cleared');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, attachments: FileAttachment[] = []) => {
     e.preventDefault();
     
-    if (!input.trim() || isLoading) {
+    if ((!input.trim() && attachments.length === 0) || isLoading) {
       return;
     }
 
@@ -54,7 +56,8 @@ export default function Chat() {
       id: Date.now().toString(),
       role: 'user',
       content: input.trim(),
-      createdAt: new Date()
+      createdAt: new Date(),
+      attachments: attachments.length > 0 ? attachments : undefined
     };
 
     // Add only the user message and set loading state
