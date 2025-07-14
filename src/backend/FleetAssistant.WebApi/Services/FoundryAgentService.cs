@@ -85,6 +85,8 @@ public class FoundryAgentService : IAgentServiceClient
         }
     }
 
+    #region Private Methods
+
     /// <summary>
     /// Sends message to the Azure AI Foundry agent
     /// </summary>
@@ -111,8 +113,6 @@ public class FoundryAgentService : IAgentServiceClient
 
         _logger.LogInformation("Successfully completed Azure AI Foundry agent interaction");
     }
-
-    #region Private Methods
 
     /// <summary>
     /// Gets existing thread ID for conversation or creates a new one
