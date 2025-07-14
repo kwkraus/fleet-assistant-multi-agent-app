@@ -1,12 +1,10 @@
 using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 using FleetAssistant.Shared.Services;
+using FleetAssistant.Shared.Models;
 using FleetAssistant.WebApi.Options;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-
-// Add this if FoundryAgentOptions is in another namespace
-// using FleetAssistant.WebApi.Options;
 using System.Runtime.CompilerServices;
 
 namespace FleetAssistant.WebApi.Services;
@@ -85,6 +83,36 @@ public class FoundryAgentService : IAgentServiceClient
         }
     }
 
+    /// <summary>
+    /// Sends a message with file attachments to the hosted agent and returns a streaming response
+    /// </summary>
+    public async IAsyncEnumerable<string> SendMessageWithFilesStreamAsync(
+        string conversationId,
+        string message,
+        List<Base64File> files,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Sending message with files to Azure AI Foundry agent: {Message}, ConversationId: {ConversationId}, FileCount: {FileCount}",
+            message, conversationId, files.Count);
+
+        IAsyncEnumerable<string> responseStream;
+
+        try
+        {
+            responseStream = SendMessageToAgentWithFilesAsync(conversationId, message, files, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error communicating with Azure AI Foundry agent with files");
+            responseStream = SendMessageWithFallbackAsync(message, cancellationToken);
+        }
+
+        await foreach (var chunk in responseStream)
+        {
+            yield return chunk;
+        }
+    }
+
     #region Private Methods
 
     /// <summary>
@@ -112,6 +140,75 @@ public class FoundryAgentService : IAgentServiceClient
         }
 
         _logger.LogInformation("Successfully completed Azure AI Foundry agent interaction");
+    }
+
+    /// <summary>
+    /// Sends message with files to the Azure AI Foundry agent
+    /// </summary>
+    private async IAsyncEnumerable<string> SendMessageToAgentWithFilesAsync(
+        string conversationId,
+        string message,
+        List<Base64File> files,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        // Get or create thread for this conversation
+        var threadId = await GetOrCreateThreadAsync(conversationId, cancellationToken);
+
+        // Upload files and create attachments
+        var attachments = new List<MessageAttachment>();
+        
+        foreach (var file in files)
+        {
+            try
+            {
+                // Validate file
+                ValidateFile(file);
+                
+                // Convert base64 to binary
+                var fileBytes = Convert.FromBase64String(file.Content);
+                using var fileStream = new MemoryStream(fileBytes);
+                
+                // Upload to Azure AI Foundry
+                _logger.LogInformation("Uploading file {FileName} to Azure AI Foundry", file.Name);
+                var uploadResponse = await _agentClient.Files.UploadFileAsync(
+                    fileStream,
+                    PersistentAgentFilePurpose.Agents,
+                    file.Name,
+                    cancellationToken: cancellationToken);
+                
+                var fileId = uploadResponse.Value.Id;
+                _logger.LogInformation("Successfully uploaded file {FileName} with ID: {FileId}", file.Name, fileId);
+                
+                // Create MessageAttachment with FileSearchToolDefinition
+                var attachment = new MessageAttachment(
+                    fileId: fileId,
+                    tools: new List<ToolDefinition> { new FileSearchToolDefinition() }
+                );
+                
+                attachments.Add(attachment);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upload file {FileName}", file.Name);
+                throw; // Fail entire operation if any file upload fails
+            }
+        }
+
+        // Add user message to thread with attachments
+        var threadMessage = await _agentClient.Messages.CreateMessageAsync(
+            threadId,
+            MessageRole.User,
+            message,
+            attachments: attachments,
+            cancellationToken: cancellationToken);
+
+        // Create and stream agent run
+        await foreach (var chunk in StreamAgentResponseAsync(threadId, cancellationToken))
+        {
+            yield return chunk;
+        }
+
+        _logger.LogInformation("Successfully completed Azure AI Foundry agent interaction with files");
     }
 
     /// <summary>
@@ -358,6 +455,51 @@ public class FoundryAgentService : IAgentServiceClient
         {
             return "I can help with fleet management including maintenance, fuel efficiency, " +
                    "route optimization, safety, and cost analysis. What specific area interests you?";
+        }
+    }
+
+    /// <summary>
+    /// Validates a base64 encoded file
+    /// </summary>
+    private void ValidateFile(Base64File file)
+    {
+        // File size validation (configurable limit)
+        const long maxFileSize = 3 * 1024 * 1024; // 3MB default - should be configurable
+        if (file.Size > maxFileSize)
+        {
+            throw new InvalidOperationException($"File {file.Name} size {file.Size / (1024 * 1024)}MB exceeds maximum allowed size of {maxFileSize / (1024 * 1024)}MB");
+        }
+
+        if (file.Size <= 0)
+        {
+            throw new InvalidOperationException($"File {file.Name} is empty");
+        }
+
+        // File type validation
+        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".doc", ".docx", ".txt", ".csv", ".xls", ".xlsx", 
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"
+        };
+
+        var fileExtension = Path.GetExtension(file.Name);
+        if (string.IsNullOrEmpty(fileExtension) || !allowedExtensions.Contains(fileExtension))
+        {
+            throw new InvalidOperationException($"File type '{fileExtension}' is not supported. Allowed types: {string.Join(", ", allowedExtensions)}");
+        }
+
+        // Validate base64 content
+        try
+        {
+            var bytes = Convert.FromBase64String(file.Content);
+            if (bytes.Length != file.Size)
+            {
+                throw new InvalidOperationException($"File {file.Name} size mismatch: declared {file.Size} bytes, actual {bytes.Length} bytes");
+            }
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException($"File {file.Name} contains invalid base64 content");
         }
     }
 

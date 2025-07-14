@@ -57,6 +57,14 @@ public class ChatController(
                 return BadRequest(new { error = "At least one user message is required" });
             }
 
+            // Validate files if present
+            if (chatRequest.Files?.Count > 0)
+            {
+                ValidateFiles(chatRequest.Files);
+                _logger.LogInformation("Processing chat request with {FileCount} files. CorrelationId: {CorrelationId}", 
+                    chatRequest.Files.Count, correlationId);
+            }
+
             // Extract conversationId
             var conversationId = chatRequest.ConversationId ?? Guid.NewGuid().ToString();
 
@@ -82,8 +90,26 @@ public class ChatController(
 
                 var contentBuilder = new StringBuilder();
 
+                // Choose appropriate service method based on whether files are present
+                IAsyncEnumerable<string> responseStream;
+                if (chatRequest.Files?.Count > 0)
+                {
+                    responseStream = _agentServiceClient.SendMessageWithFilesStreamAsync(
+                        conversationId, 
+                        lastUserMessage.Content, 
+                        chatRequest.Files, 
+                        cancellationToken);
+                }
+                else
+                {
+                    responseStream = _agentServiceClient.SendMessageStreamAsync(
+                        conversationId, 
+                        lastUserMessage.Content, 
+                        cancellationToken);
+                }
+
                 // Stream chunks as they arrive
-                await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(conversationId, lastUserMessage.Content, cancellationToken))
+                await foreach (var chunk in responseStream)
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -186,6 +212,54 @@ public class ChatController(
         catch (Exception ex) when (ex is OperationCanceledException || cancellationToken.IsCancellationRequested)
         {
             // Client disconnected, ignore
+        }
+    }
+
+    /// <summary>
+    /// Validates uploaded files
+    /// </summary>
+    /// <param name="files">Files to validate</param>
+    private void ValidateFiles(List<Base64File> files)
+    {
+        const int maxFileCount = 2;
+        const long maxFileSize = 3 * 1024 * 1024; // 3MB
+
+        if (files.Count > maxFileCount)
+        {
+            throw new InvalidOperationException($"Maximum {maxFileCount} files allowed, received {files.Count}");
+        }
+
+        foreach (var file in files)
+        {
+            if (file.Size > maxFileSize)
+            {
+                throw new InvalidOperationException($"File {file.Name} size {file.Size / (1024 * 1024)}MB exceeds maximum allowed size of {maxFileSize / (1024 * 1024)}MB");
+            }
+
+            if (file.Size <= 0)
+            {
+                throw new InvalidOperationException($"File {file.Name} is empty");
+            }
+
+            if (string.IsNullOrWhiteSpace(file.Name))
+            {
+                throw new InvalidOperationException("File name is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(file.Content))
+            {
+                throw new InvalidOperationException($"File {file.Name} content is empty");
+            }
+
+            // Basic base64 validation
+            try
+            {
+                Convert.FromBase64String(file.Content);
+            }
+            catch (FormatException)
+            {
+                throw new InvalidOperationException($"File {file.Name} contains invalid base64 content");
+            }
         }
     }
 }

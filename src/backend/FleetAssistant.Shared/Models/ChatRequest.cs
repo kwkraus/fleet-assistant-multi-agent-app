@@ -22,6 +22,13 @@ public class ChatRequest
     public string? ConversationId { get; set; }
 
     /// <summary>
+    /// Optional base64 encoded files (maximum 2 files)
+    /// </summary>
+    [MaxLength(2)]
+    [JsonPropertyName("files")]
+    public List<Base64File>? Files { get; set; }
+
+    /// <summary>
     /// Optional additional options
     /// </summary>
     [JsonPropertyName("options")]
