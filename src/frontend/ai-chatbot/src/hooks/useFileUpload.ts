@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from 'react'
-import { FileAttachment, validateFile, FileUploadError, MAX_FILES_PER_MESSAGE } from '../types/fileTypes'
+import { FileAttachment, validateFile, FileUploadError, MAX_FILES_PER_MESSAGE, fileToBase64 } from '../types/fileTypes'
 
 interface UseFileUploadOptions {
   maxFiles?: number
@@ -50,6 +50,24 @@ export function useFileUpload({ maxFiles = MAX_FILES_PER_MESSAGE, onError }: Use
         size: file.size,
         type: file.type
       }
+
+      // Generate base64 data for API requests
+      fileToBase64(file).then(base64Data => {
+        setAttachments(prev => 
+          prev.map(att => 
+            att.id === attachment.id 
+              ? { ...att, base64Data }
+              : att
+          )
+        )
+      }).catch(error => {
+        console.error('Error converting file to base64:', error)
+        onError?.({
+          code: 'BASE64_CONVERSION_ERROR',
+          message: `Failed to process file: ${file.name}`,
+          fileName: file.name
+        })
+      })
 
       // Generate preview for images
       if (file.type.startsWith('image/')) {

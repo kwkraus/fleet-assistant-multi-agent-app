@@ -50,6 +50,10 @@ builder.Services.AddScoped<IFinancialRepository, FinancialRepository>();
 builder.Services.Configure<BlobStorageOptions>(
     builder.Configuration.GetSection(BlobStorageOptions.SectionName));
 
+// Configure File Upload Options
+builder.Services.Configure<FileUploadOptions>(
+    builder.Configuration.GetSection(FileUploadOptions.SectionName));
+
 // Register Blob Storage services
 builder.Services.AddSingleton(provider =>
 {

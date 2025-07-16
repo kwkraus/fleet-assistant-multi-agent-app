@@ -5,6 +5,8 @@ namespace FleetAssistant.WebApi.Options;
 /// </summary>
 public class FileUploadOptions
 {
+    public const string SectionName = "FileUpload";
+    
     /// <summary>
     /// Maximum file size in bytes (default: 3MB)
     /// </summary>

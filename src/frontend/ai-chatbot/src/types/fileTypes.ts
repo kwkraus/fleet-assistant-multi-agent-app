@@ -9,12 +9,21 @@ export interface FileAttachment {
   preview?: string; // For image previews
   uploadProgress?: number;
   error?: string;
+  base64Data?: string; // Base64 encoded file data for API requests
 }
 
 export interface FileUploadError {
   code: string;
   message: string;
   fileName?: string;
+}
+
+// Interface for API requests - matches backend Base64File model
+export interface Base64File {
+  name: string;
+  type: string;
+  size: number;
+  content: string; // Base64 encoded content
 }
 
 export const SUPPORTED_FILE_TYPES = {
@@ -36,8 +45,8 @@ export const SUPPORTED_FILE_TYPES = {
   'image/webp': ['.webp']
 } as const;
 
-export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-export const MAX_FILES_PER_MESSAGE = 5;
+export const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB to match backend default
+export const MAX_FILES_PER_MESSAGE = 2; // 2 files to match backend limit
 
 export const getFileIcon = (type: string): string => {
   if (type.startsWith('image/')) return '🖼️';
@@ -81,4 +90,42 @@ export const validateFile = (file: File): FileUploadError | null => {
   }
 
   return null;
+};
+
+// Utility function to convert File to base64
+export const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        // Remove the data URL prefix (e.g., "data:image/png;base64,")
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      } else {
+        reject(new Error('Failed to read file as base64'));
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+};
+
+// Convert FileAttachment to Base64File for API requests
+export const fileAttachmentToBase64File = async (attachment: FileAttachment): Promise<Base64File> => {
+  if (attachment.base64Data) {
+    return {
+      name: attachment.name,
+      type: attachment.type,
+      size: attachment.size,
+      content: attachment.base64Data
+    };
+  }
+  
+  const base64Data = await fileToBase64(attachment.file);
+  return {
+    name: attachment.name,
+    type: attachment.type,
+    size: attachment.size,
+    content: base64Data
+  };
 };

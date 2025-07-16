@@ -229,6 +229,15 @@ public class FoundryAgentService : IAgentServiceClient
         var threadResponse = await _agentClient.Threads.CreateThreadAsync(cancellationToken: cancellationToken);
         var newThreadId = threadResponse.Value.Id;
 
+        var thread = threadResponse.Value;
+
+        thread.ToolResources = new List<ToolResource>
+        {
+            new ToolResource(
+                id: "fileSearch",
+                definition: new FileSearchToolDefinition())
+        };
+
         // Map conversation to thread if conversationId is provided
         if (!string.IsNullOrEmpty(conversationId))
         {

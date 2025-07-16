@@ -35,7 +35,7 @@ export function ChatInput({
   
   // File upload hook
   const fileUploadHook = useFileUpload({
-    maxFiles: 5
+    maxFiles: 2 // Updated to match backend limit
   })
 
   // Auto-resize textarea

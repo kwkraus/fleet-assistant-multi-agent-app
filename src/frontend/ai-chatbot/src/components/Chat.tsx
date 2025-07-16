@@ -6,6 +6,7 @@ import { ChatMessageList } from './chat/ChatMessageList';
 import { ChatInput } from './chat/ChatInput';
 import { PageLayout } from './layout/PageLayout';
 import { FileAttachment } from '../types/fileTypes';
+import { fileAttachmentToBase64File, Base64File } from '../types/fileTypes';
 
 interface ChatMessage {
   id: string;
@@ -28,7 +29,7 @@ interface SSEEventData {
 }
 
 export default function Chat() {
-  const azureFunctionsBaseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTIONS_BASE_URL || 'http://localhost:7071';
+  const webApiBaseUrl = process.env.NEXT_PUBLIC_WEBAPI_BASE_URL || 'https://localhost:7074';
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -66,42 +67,14 @@ export default function Chat() {
     setIsLoading(true); // This will show the "Thinking" animation
 
     try {
-      const requestBody: {
-        messages: { id: string; role: string; content: string }[];
-        conversationId?: string;
-      } = {
-        messages: [...messages, userMessage].map(msg => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content
-        }))
-      };
-
-      // Include conversationId if we have one
-      if (conversationId) {
-        requestBody.conversationId = conversationId;
+      // Route to appropriate API based on file attachments
+      if (attachments.length > 0) {
+        // Use WebApi for requests with files
+        await handleWebApiRequest(userMessage, attachments);
+      } else {
+        // Use Azure Functions for text-only requests
+        await handleAzureFunctionsRequest(userMessage);
       }
-
-      const response = await fetch(`${azureFunctionsBaseUrl}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      if (!response.body) {
-        throw new Error('No response body for streaming');
-      }
-
-      // Handle streaming response
-      await handleStreamingResponse(response.body);
-
     } catch (error) {
       console.error('Chat error:', error);
       
@@ -116,6 +89,83 @@ export default function Chat() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAzureFunctionsRequest = async (userMessage: ChatMessage) => {
+    const requestBody: {
+      messages: { id: string; role: string; content: string }[];
+      conversationId?: string;
+    } = {
+      messages: [...messages, userMessage].map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content
+      }))
+    };
+
+    // Include conversationId if we have one
+    if (conversationId) {
+      requestBody.conversationId = conversationId;
+    }
+
+    const response = await fetch(`${webApiBaseUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error('No response body for streaming');
+    }
+
+    // Handle streaming response
+    await handleStreamingResponse(response.body);
+  };
+
+  const handleWebApiRequest = async (userMessage: ChatMessage, attachments: FileAttachment[]) => {
+    // Convert attachments to base64 files
+    const base64Files: Base64File[] = [];
+    for (const attachment of attachments) {
+      const base64File = await fileAttachmentToBase64File(attachment);
+      base64Files.push(base64File);
+    }
+
+    const requestBody = {
+      messages: [...messages, userMessage].map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content
+      })),
+      conversationId: conversationId,
+      files: base64Files
+    };
+
+    const response = await fetch(`${webApiBaseUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error('No response body for streaming');
+    }
+
+    // Handle streaming response
+    await handleStreamingResponse(response.body);
   };
 
   const handleStreamingResponse = async (body: ReadableStream<Uint8Array>) => {
