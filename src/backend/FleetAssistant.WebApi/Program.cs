@@ -7,6 +7,7 @@ using FleetAssistant.WebApi.Repositories;
 using FleetAssistant.WebApi.Repositories.Interfaces;
 using FleetAssistant.WebApi.Services;
 using FleetAssistant.WebApi.Services.Interfaces;
+using FleetAssistant.WebApi.Data.Seeding;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -30,7 +31,6 @@ else
 {
     builder.Services.AddDbContext<FleetAssistantDbContext>(options =>
         options.UseSqlServer(connectionString));
-
 }
 
 // Add ASP.NET Core Health Checks
@@ -45,6 +45,9 @@ builder.Services.AddScoped<IFuelLogRepository, FuelLogRepository>();
 builder.Services.AddScoped<IMaintenanceRepository, MaintenanceRepository>();
 builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
 builder.Services.AddScoped<IFinancialRepository, FinancialRepository>();
+
+// Seeder
+builder.Services.AddScoped<IDatabaseSeeder, DatabaseSeeder>();
 
 // Configure Blob Storage
 builder.Services.Configure<BlobStorageOptions>(
@@ -181,7 +184,20 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
     }
 });
 
-app.Run();
+// Seed sample data for in-memory provider (development / local testing)
+using (var scope = app.Services.CreateScope())
+{
+    var scopedServices = scope.ServiceProvider;
+    var db = scopedServices.GetRequiredService<FleetAssistantDbContext>();
+    var provider = db.Database.ProviderName;
+    if (!string.IsNullOrWhiteSpace(provider) && provider.Contains("InMemory", StringComparison.OrdinalIgnoreCase))
+    {
+        var seeder = scopedServices.GetRequiredService<IDatabaseSeeder>();
+        await seeder.SeedAsync();
+    }
+}
+
+await app.RunAsync();
 
 // Make Program class accessible for testing
 public partial class Program { }
