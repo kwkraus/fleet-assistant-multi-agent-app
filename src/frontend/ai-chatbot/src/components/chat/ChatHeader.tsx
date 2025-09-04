@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ThemeSelector } from "@/components/theme-selector"
 import { Container } from "@/components/layout/Container"
+import { NotificationBell } from "@/components/notifications"
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 
@@ -64,7 +65,8 @@ export function ChatHeader({
             )}
 
             {/* Mobile Actions Menu */}
-            <div className="flex md:hidden">
+            <div className="flex md:hidden items-center space-x-2">
+              <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -120,6 +122,7 @@ export function ChatHeader({
                   </Button>
                 </div>
               )}
+              <NotificationBell />
               <ThemeSelector />
             </div>
           </div>

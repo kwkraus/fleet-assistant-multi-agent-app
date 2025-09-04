@@ -5,6 +5,7 @@ import { ChatHeader } from './chat/ChatHeader';
 import { ChatMessageList } from './chat/ChatMessageList';
 import { ChatInput } from './chat/ChatInput';
 import { PageLayout } from './layout/PageLayout';
+import { useNotifications } from './notifications';
 
 interface ChatMessage {
   id: string;
@@ -26,7 +27,8 @@ interface SSEEventData {
 }
 
 export default function Chat() {
-  const azureFunctionsBaseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTIONS_BASE_URL || 'http://localhost:7071';
+  const azureFunctionsBaseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTIONS_BASE_URL || 'http://localhost:5074';
+  const { addNotification } = useNotifications();
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -169,6 +171,13 @@ export default function Chat() {
         if (data.conversationId && !conversationId) {
           setConversationId(data.conversationId);
           console.log('New conversation started with ID:', data.conversationId);
+          
+          // Add new conversation notification
+          addNotification({
+            title: 'New Conversation Started',
+            message: `Conversation ${data.conversationId.substring(0, 8)}... is now active.`,
+            type: 'info'
+          });
         }
         return messageId;
 
@@ -201,11 +210,27 @@ export default function Chat() {
         // Streaming completed
         console.log('Streaming completed for message:', messageId);
         setIsLoading(false); // Ensure loading is false
+        
+        // Add completion notification
+        addNotification({
+          title: 'Response Completed',
+          message: 'Fleet Assistant has finished generating the response.',
+          type: 'success'
+        });
+        
         return messageId;
 
       case 'error':
         // Handle streaming error
         console.error('Streaming error:', data.message);
+        
+        // Add error notification
+        addNotification({
+          title: 'Response Error',
+          message: data.message || 'An error occurred while generating the response.',
+          type: 'error'
+        });
+        
         if (!messageId) {
           // Create error message if no assistant message exists yet
           const errorMessageId = (Date.now() + 1).toString();

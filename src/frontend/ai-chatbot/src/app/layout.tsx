@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 // import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { NotificationProvider } from "@/components/notifications";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 
 // const geistSans = Geist({
@@ -41,7 +42,9 @@ export default function RootLayout({
           defaultTheme="light"
           storageKey="fleet-assistant-theme"
         >
-          {children}
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
         </ThemeProvider>
       </body>
     </html>
