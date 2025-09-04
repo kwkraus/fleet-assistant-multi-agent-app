@@ -15,7 +15,7 @@ Content-Type: application/json
 
 ###
 
-PO1ST https://localhost:7074/api/chat
+POST https://localhost:7074/api/chat
 Content-Type: application/json
 
 {
