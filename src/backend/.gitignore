@@ -5,6 +5,8 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Casey Kriutzfield must review this line
+
 # User-specific files
 *.rsuser
 *.suo
