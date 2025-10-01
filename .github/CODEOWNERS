@@ -1,5 +1,5 @@
 /docs/ @kwkraus
 /src/backend/ @kwkraus
 /src/frontend/ @ckriutz
-/src/**/*.js @TeplrGuy
 /.github/ @kwkraus
+/testing/ @TeplrGuy
