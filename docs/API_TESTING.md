@@ -2,6 +2,8 @@
 
 This guide shows how to test the Fleet Assistant API using curl and other tools.
 
+This needs to be reviewed and approved automatically
+
 ## API Key Authentication
 
 The API uses API Key authentication instead of OAuth/OIDC for faster development iteration. The system supports multiple header formats:
