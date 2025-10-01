@@ -9,6 +9,8 @@ async function testAzureAI() {
       new DefaultAzureCredential()
     );
 
+    console.log('we did it');
+
     console.log('Client created successfully');
     
     // Try to get the client and see if we can introspect the post method
