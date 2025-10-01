@@ -1,0 +1,4 @@
+# Path Pattern        Owners
+/backend/*            @kwkraus
+/frontend/*           @frontend-lead @design-team
+*.js                  @javascript-team
