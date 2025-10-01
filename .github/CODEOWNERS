@@ -1,4 +1,4 @@
 # Path Pattern        Owners
 /src/backend/*            @kwkraus
 /src/frontend/*           @ckriutz
-*.js                  @kwkraus
+/backend/**/*.js            @kwkraus
