@@ -2,6 +2,7 @@ const testChatEndpoint = async () => {
     const baseUrl = 'http://localhost:7071';
     
     console.log('Testing Chat Endpoint with Foundry Agent Service...\n');
+    console.log('I need Gilbert to review this test code.\n');
     
     try {
         // Test chat endpoint with maintenance query
