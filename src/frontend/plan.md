@@ -2,6 +2,8 @@
 
 **Blueprint for Iterative, Prompt-Driven Development**
 
+A new sentence for Casey to review :)
+
 ---
 
 ## 1. Project Bootstrap
