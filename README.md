@@ -2,6 +2,8 @@
 
 A sophisticated multi-agent fleet management system built with ASP.NET Core WebAPI backend and Next.js 15 frontend, powered by Azure AI Foundry Agent Service. This application provides intelligent fleet management capabilities through specialized AI agents that coordinate to handle fuel tracking, maintenance scheduling, safety monitoring, and more.
 
+<img width="1103" height="905" alt="image" src="https://github.com/user-attachments/assets/52f05cc8-d369-430f-85e2-2ff5f4651a43" />
+
 ## 🏗️ Architecture
 
 The application consists of three main components:
