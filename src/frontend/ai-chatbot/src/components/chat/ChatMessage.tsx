@@ -190,7 +190,7 @@ export function ChatMessage({ message, isLastMessage, className }: ChatMessagePr
 
           {/* Message Actions (Show on hover for assistant messages) */}
           {isAssistant && (
-            <div className="absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="absolute -bottom-8 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <div className="flex items-center space-x-1">
                 <Button
                   variant="ghost"
