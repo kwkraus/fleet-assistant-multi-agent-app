@@ -3,15 +3,15 @@
 ## Architecture Overview
 
 This is a **multi-agent fleet management system** with three main components:
-- **Backend**: ASP.NET Core WebAPI (`src/backend/FleetAssistant.WebApi`) using Azure AI Foundry Agent Service
-- **Frontend**: Next.js chat interface (`src/frontend/ai-chatbot`) with Vercel AI SDK integration  
+- **Backend**: ASP.NET Core WebAPI (`src/backend/FleetAssistant.WebApi`) using Azure AI Foundry Agent Service via `Azure.AI.Agents.Persistent` SDK
+- **Frontend**: Next.js 15 chat interface (`src/frontend/ai-chatbot`) with custom SSE streaming implementation
 - **Shared**: Common models and interfaces (`src/backend/FleetAssistant.Shared`)
 
 ### Key Design Patterns
 
-**Multi-Agent Coordination**: The system uses a Planning Agent that orchestrates specialized agents (FuelAgent, MaintenanceAgent, SafetyAgent) via Azure AI Foundry's `Azure.AI.Agents.Persistent` SDK.
+**Multi-Agent Coordination**: The system uses Azure AI Foundry Agent Service (`PersistentAgentsClient`) to interact with hosted agents. The backend maintains conversation-to-thread mapping using `ConcurrentDictionary<string, string>`.
 
-**Streaming Chat Architecture**: Server-Sent Events (SSE) streaming from WebAPI to frontend using `IAsyncEnumerable<string>` pattern compatible with Vercel AI SDK.
+**Streaming Chat Architecture**: Server-Sent Events (SSE) streaming from WebAPI to frontend. Backend uses `IAsyncEnumerable<string>` pattern with custom SSE event formatting. Frontend uses custom SSE reader (not Vercel AI SDK `useChat`).
 
 **Repository Pattern**: All data access through `IRepository<T>` with Entity Framework Core, supporting both SQL Server and in-memory databases.
 
@@ -30,15 +30,18 @@ npm run dev
 ```
 
 ### Key Configuration Requirements
-- `FOUNDRY_AGENT_ENDPOINT`: Azure AI Foundry service URL
-- `AgentService:AgentId`: The hosted agent identifier
+- `FoundryAgentService:AgentEndpoint`: Azure AI Foundry service URL
+- `FoundryAgentService:AgentId`: The hosted agent identifier
+- `FoundryAgentService:RunPollingDelayMs`: Polling interval for run status (default: 100ms)
+- `FoundryAgentService:StreamingDelayMs`: Delay between streaming chunks (default: 50ms)
 - `DefaultAzureCredential` for Azure authentication (no API keys needed)
+- `UseFoundryAgent`: Boolean flag to enable/disable Foundry Agent integration (default: true)
 
 ### Testing Patterns
 Use the Node.js test scripts in `/testing/` directory:
 - `test-webapi-chat.js`: Streaming chat endpoint verification
 - `test-integration.ps1`: Full-stack integration test
-- Test WebAPI on `http://localhost:5074/api/chat`
+- Test WebAPI on `http://localhost:5074/api/chat` (or port 7074 for HTTPS)
 - Test frontend on `http://localhost:3000`
 
 ## Critical Implementation Details
@@ -49,12 +52,18 @@ The `FoundryAgentService` class manages conversation state using a `ConcurrentDi
 ### Streaming Response Pattern
 ```csharp
 // In controllers, use this pattern for SSE streaming:
-Response.Headers.Add("Content-Type", "text/event-stream");
-Response.Headers.Add("Cache-Control", "no-cache");
-await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync())
+Response.Headers.ContentType = "text/event-stream";
+Response.Headers.CacheControl = "no-cache";
+// Note: Connection header not needed for HTTP/2+
+
+await WriteSSEEvent("metadata", new { conversationId, messageId, timestamp = DateTime.UtcNow }, cancellationToken);
+
+await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync(conversationId, message, cancellationToken))
 {
-    await Response.WriteAsync($"data: {JsonSerializer.Serialize(chunk)}\n\n");
+    await WriteSSEEvent("chunk", new { content = chunk }, cancellationToken);
 }
+
+await WriteSSEEvent("done", new { messageId, timestamp = DateTime.UtcNow }, cancellationToken);
 ```
 
 ### Entity Framework Conventions
@@ -64,16 +73,18 @@ await foreach (var chunk in _agentServiceClient.SendMessageStreamAsync())
 - DTOs in `FleetAssistant.Shared.DTOs` namespace
 
 ### Frontend Integration Points
-- Uses `@ai-sdk/react` with `useChat` hook
-- API endpoint: `/api/chat` expecting `{ messages: ChatMessage[] }`
-- Streaming responses auto-handled by Vercel AI SDK
-- Tailwind CSS with Radix UI components
+- Custom SSE implementation with manual `ReadableStream` handling
+- API endpoint: WebAPI `/api/chat` expecting `{ messages: ChatMessage[], conversationId?: string }`
+- SSE event types: `metadata`, `chunk`, `done`, `error`
+- Does NOT use Vercel AI SDK's `useChat` hook - uses custom streaming logic in `Chat.tsx`
+- Tailwind CSS v4 with Radix UI components
+- Next.js 15 with App Router and React 19
 
 ## Project-Specific Conventions
 
 ### Dependency Injection Structure
 - `IAgentServiceClient` → `FoundryAgentService` (Azure AI integration)
-- `IBlobStorageService` → `BlobStorageService` (document storage)
+- `IStorageService` → `BlobStorageService` (document storage)
 - Repository pattern for all data entities
 - Health checks for EF Core and Foundry Agent connectivity
 
@@ -83,9 +94,6 @@ Use correlation IDs in all controllers:
 var correlationId = Guid.NewGuid().ToString();
 _logger.LogInformation("Operation started. CorrelationId: {CorrelationId}", correlationId);
 ```
-
-### Multi-Tenant Architecture
-The system supports multi-tenant configuration via API keys with tenant-specific agent integrations (GeoTab, Fleetio, Samsara plugins).
 
 ## Integration Points
 
