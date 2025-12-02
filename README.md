@@ -354,7 +354,50 @@ The optimized production build will be created in the `.next` directory.
 
 ## 🚢 Deployment
 
-### Deploy to Azure
+### Deploy to Azure with Bicep (Recommended)
+
+Fleet Assistant includes comprehensive Bicep Infrastructure-as-Code templates following the **Microsoft Reliable Web App (RWA) pattern** for automated, repeatable deployments.
+
+#### Quick Start - Bicep Deployment
+
+```bash
+# Prerequisites
+az login
+az account set --subscription "YOUR_SUBSCRIPTION_ID"
+
+# Deploy to development
+cd infra
+az deployment sub create \
+  --location eastus \
+  --template-file main.bicep \
+  --parameters parameters.dev.bicepparam \
+  --parameters sqlAdminPassword='YourSecurePassword123!' \
+  --name fleet-dev-deployment-$(date +%Y%m%d-%H%M%S)
+```
+
+#### Infrastructure Includes
+
+- ✅ **Hub-and-Spoke VNet Topology** - Centralized security and resource management
+- ✅ **Azure Front Door with WAF** - Global load balancing, DDoS protection, OWASP Top 10
+- ✅ **Private Endpoints** - Secure access to SQL Database, Blob Storage, and App Service
+- ✅ **Azure AI Foundry** - AI Hub, Project, and Services for multi-agent system
+- ✅ **App Service with Autoscaling** - HTTP/2 enabled for SSE streaming
+- ✅ **Static Web App** - Next.js 15 frontend with automatic backend URL configuration
+- ✅ **Application Insights** - Comprehensive monitoring and telemetry
+- ✅ **Managed Identity** - Secure, credential-free access to Azure services
+
+#### Detailed Documentation
+
+See the complete deployment guide: [infra/DEPLOYMENT.md](./infra/DEPLOYMENT.md)
+
+Additional documentation:
+- [Network Architecture](./infra/NETWORK_ARCHITECTURE.md) - Hub-and-spoke topology diagrams
+- [Security Configuration](./infra/SECURITY_CONFIGURATION.md) - WAF, NSGs, private endpoints
+- [Monitoring Setup](./infra/MONITORING_SETUP.md) - Application Insights, alerts, dashboards
+
+### Deploy to Azure (Manual Setup)
+
+For manual deployment without Bicep:
 
 #### Prerequisites
 

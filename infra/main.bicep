@@ -182,7 +182,7 @@ module storage 'modules/storage.bicep' = {
   scope: resourceGroup
   name: 'storage-deployment'
   params: {
-    storageAccountName: '${applicationName}st${environment}${uniqueSuffix}'
+    storageAccountName: '${applicationName}st${uniqueSuffix}' // Shorter name to fit 24 char limit
     containerName: 'fleet-documents'
     location: location
     tags: tags
