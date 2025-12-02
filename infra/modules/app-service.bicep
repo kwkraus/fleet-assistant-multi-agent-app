@@ -73,6 +73,9 @@ param enableSnapshotDebugging bool = false
 @description('Enable Always On')
 param alwaysOn bool = true
 
+@description('CORS allowed origins (use specific domains for production)')
+param corsAllowedOrigins array = ['*']
+
 // ============================================================================
 // APP SERVICE PLAN
 // ============================================================================
@@ -200,9 +203,7 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
       ftpsState: 'FtpsOnly'
       healthCheckPath: '/healthz'
       cors: {
-        allowedOrigins: [
-          '*'
-        ]
+        allowedOrigins: corsAllowedOrigins
         supportCredentials: false
       }
       appSettings: [

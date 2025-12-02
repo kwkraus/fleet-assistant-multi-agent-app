@@ -342,7 +342,7 @@ resource blobPrivateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetwor
 
 // Private DNS Zone for Azure SQL Database
 resource sqlPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink${az.environment().suffixes.sqlServerHostname}'
+  name: 'privatelink.${az.environment().suffixes.sqlServerHostname}'
   location: 'global'
   tags: tags
 }

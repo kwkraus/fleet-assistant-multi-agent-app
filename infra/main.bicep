@@ -268,6 +268,10 @@ module appService 'modules/app-service.bicep' = {
     privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
     appServicePrivateDnsZoneId: networking.outputs.appServicePrivateDnsZoneId
     enableSnapshotDebugging: enableSnapshotDebugging
+    corsAllowedOrigins: environment == 'dev' ? ['*'] : [
+      'https://${staticWebApp.outputs.defaultHostname}'
+      'https://${security.outputs.frontDoorEndpointHostName}'
+    ]
   }
   dependsOn: [
     monitoring
