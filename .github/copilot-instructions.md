@@ -112,3 +112,6 @@ _logger.LogInformation("Operation started. CorrelationId: {CorrelationId}", corr
 - `src/backend/FleetAssistant.WebApi/Program.cs` - DI container configuration
 - `docs/MULTI_AGENT_INTEGRATION_GUIDE.md` - Architecture documentation
 - `testing/test-integration.ps1` - Development workflow validation
+### Azure DevOps Copilot MCP
+- Copilot now relies on `docs/COPILOT_MCP_AZURE_DEVOPS.md` for the Azure DevOps MCP server configuration steps (workflow, environment secrets, MCP `ado` JSON, and validation)
+- The new `.github/workflows/copilot-setup-steps.yml` workflow runs `azure/login` in the `copilot` environment so the MCP server can reuse Azure credentials via OIDC
