@@ -1,0 +1,124 @@
+// ============================================================================
+// Production Environment Parameters - TEMPLATE
+// Copy this file to parameters.prod.bicepparam and customize
+// ============================================================================
+
+using './main.bicep'
+
+// Environment configuration
+param environment = 'prod'
+param location = 'eastus' // Change to your preferred region
+param applicationName = 'fleet'
+
+// SQL credentials - MUST be provided securely
+// DO NOT commit actual credentials to source control
+// Pass via command line: --parameters sqlAdminUsername='admin' sqlAdminPassword='SecurePassword123!'
+param sqlAdminUsername = 'sqladmin'
+// param sqlAdminPassword = 'REPLACE_WITH_SECURE_PASSWORD'
+
+// Tags
+param tags = {
+  Application: 'FleetAssistant'
+  Environment: 'prod'
+  ManagedBy: 'Bicep'
+  CostCenter: 'Operations'
+  Owner: 'ProductionTeam'
+  Compliance: 'Required'
+}
+
+// Feature flags
+param enableSnapshotDebugging = false // Set to true only when debugging production issues
+
+// Azure AI Foundry configuration
+param foundryConfig = {
+  aiHubName: 'fleet-aihub-prod'
+  projectName: 'fleet-aiproject-prod'
+  aiServicesName: 'fleet-aiservices-prod'
+}
+
+// Networking configuration (production - separate address spaces)
+param networkConfig = {
+  hubVnetAddressPrefix: '10.100.0.0/16'
+  hubFirewallSubnetPrefix: '10.100.1.0/24'
+  hubBastionSubnetPrefix: '10.100.2.0/24'
+  spokeVnetAddressPrefix: '10.101.0.0/16'
+  spokeAppServiceSubnetPrefix: '10.101.1.0/24'
+  spokePrivateEndpointSubnetPrefix: '10.101.2.0/24'
+  spokeDatabaseSubnetPrefix: '10.101.3.0/24'
+}
+
+// App Service configuration (production - high performance)
+param appServiceConfig = {
+  dev: {
+    skuName: 'B1'
+    skuTier: 'Basic'
+    minInstances: 1
+    maxInstances: 2
+    autoscaleEnabled: false
+  }
+  staging: {
+    skuName: 'S1'
+    skuTier: 'Standard'
+    minInstances: 1
+    maxInstances: 3
+    autoscaleEnabled: true
+  }
+  prod: {
+    skuName: 'P1v3'
+    skuTier: 'PremiumV3'
+    minInstances: 2
+    maxInstances: 10
+    autoscaleEnabled: true
+  }
+}
+
+// SQL Database configuration (production - standard tier with capacity)
+param sqlConfig = {
+  dev: {
+    skuName: 'Basic'
+    skuTier: 'Basic'
+    capacity: 5
+  }
+  staging: {
+    skuName: 'S0'
+    skuTier: 'Standard'
+    capacity: 10
+  }
+  prod: {
+    skuName: 'S1'
+    skuTier: 'Standard'
+    capacity: 20
+  }
+}
+
+// ============================================================================
+// PRODUCTION DEPLOYMENT NOTES
+// ============================================================================
+// 
+// 1. Custom Domain Configuration:
+//    - Configure custom domains for Front Door after deployment
+//    - Set up SSL certificates
+//    - Update DNS records
+//
+// 2. Security:
+//    - Use Azure Key Vault for secrets management
+//    - Configure managed identities for all service-to-service communication
+//    - Review and tighten NSG rules based on actual traffic patterns
+//    - Enable private endpoints for all services
+//
+// 3. Monitoring:
+//    - Configure Application Insights alerts
+//    - Set up log retention policies
+//    - Configure diagnostic settings for all resources
+//
+// 4. Disaster Recovery:
+//    - Configure geo-replication for SQL Database
+//    - Set up backup retention policies
+//    - Document and test failover procedures
+//
+// 5. Cost Management:
+//    - Review autoscaling rules and adjust thresholds
+//    - Monitor resource utilization
+//    - Set up budget alerts
+//
+// ============================================================================

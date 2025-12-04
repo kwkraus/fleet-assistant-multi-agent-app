@@ -1,0 +1,89 @@
+// ============================================================================
+// Staging Environment Parameters - TEMPLATE
+// Copy this file to parameters.staging.bicepparam and customize
+// ============================================================================
+
+using './main.bicep'
+
+// Environment configuration
+param environment = 'staging'
+param location = 'eastus'
+param applicationName = 'fleet'
+
+// SQL credentials - provide securely via command line
+param sqlAdminUsername = 'sqladmin'
+// Pass sqlAdminPassword securely via: --parameters sqlAdminPassword='YourSecurePassword123!'
+
+// Tags
+param tags = {
+  Application: 'FleetAssistant'
+  Environment: 'staging'
+  ManagedBy: 'Bicep'
+  CostCenter: 'Engineering'
+  Owner: 'QATeam'
+}
+
+// Feature flags
+param enableSnapshotDebugging = false
+
+// Azure AI Foundry configuration
+param foundryConfig = {
+  aiHubName: 'fleet-aihub-staging'
+  projectName: 'fleet-aiproject-staging'
+  aiServicesName: 'fleet-aiservices-staging'
+}
+
+// Networking configuration (staging - intermediate ranges)
+param networkConfig = {
+  hubVnetAddressPrefix: '10.50.0.0/16'
+  hubFirewallSubnetPrefix: '10.50.1.0/24'
+  hubBastionSubnetPrefix: '10.50.2.0/24'
+  spokeVnetAddressPrefix: '10.51.0.0/16'
+  spokeAppServiceSubnetPrefix: '10.51.1.0/24'
+  spokePrivateEndpointSubnetPrefix: '10.51.2.0/24'
+  spokeDatabaseSubnetPrefix: '10.51.3.0/24'
+}
+
+// App Service configuration (staging - moderate performance with autoscaling)
+param appServiceConfig = {
+  dev: {
+    skuName: 'B1'
+    skuTier: 'Basic'
+    minInstances: 1
+    maxInstances: 2
+    autoscaleEnabled: false
+  }
+  staging: {
+    skuName: 'S1'
+    skuTier: 'Standard'
+    minInstances: 1
+    maxInstances: 3
+    autoscaleEnabled: true
+  }
+  prod: {
+    skuName: 'P1v3'
+    skuTier: 'PremiumV3'
+    minInstances: 2
+    maxInstances: 10
+    autoscaleEnabled: true
+  }
+}
+
+// SQL Database configuration (staging - standard tier)
+param sqlConfig = {
+  dev: {
+    skuName: 'Basic'
+    skuTier: 'Basic'
+    capacity: 5
+  }
+  staging: {
+    skuName: 'S0'
+    skuTier: 'Standard'
+    capacity: 10
+  }
+  prod: {
+    skuName: 'S1'
+    skuTier: 'Standard'
+    capacity: 20
+  }
+}
