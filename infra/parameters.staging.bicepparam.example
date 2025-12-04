@@ -1,0 +1,122 @@
+// ========================================
+// Staging Environment Parameters (EXAMPLE)
+// ========================================
+// This is a template for staging deployment parameters
+// Copy this file to parameters.staging.bicepparam and customize for your environment
+
+using './main.bicep'
+
+// ========================================
+// Core Parameters
+// ========================================
+
+param environmentName = 'staging'
+param baseName = 'fleet' // Update with your staging base name
+param location = 'eastus' // Match production region for testing
+
+param tags = {
+  Environment: 'staging'
+  Application: 'FleetAssistant'
+  ManagedBy: 'Bicep'
+  Pattern: 'ReliableWebApp'
+  CostCenter: 'Engineering'
+  Owner: 'QATeam'
+  Purpose: 'PreProductionTesting'
+}
+
+// ========================================
+// Networking Parameters
+// ========================================
+
+param hubVNetAddressPrefix = '10.0.0.0/16'
+param spokeVNetAddressPrefix = '10.1.0.0/16'
+
+// ========================================
+// Security Parameters
+// ========================================
+
+// WAF enabled for staging to test production configuration
+param enableWaf = true
+
+// ========================================
+// App Service Parameters
+// ========================================
+
+// Standard tier for staging (balance of cost and production-like environment)
+param appServicePlanSku = 'S1'
+param appServiceInstanceCount = 1
+param enableAutoscaling = false
+param minInstanceCount = 1
+param maxInstanceCount = 3
+
+// ========================================
+// AI Foundry Parameters
+// ========================================
+
+// Standard tier for staging
+param aiServicesSku = 'S0'
+
+// Agent ID - Update this with your staging agent ID
+param foundryAgentId = 'YOUR_STAGING_AGENT_ID'
+
+// ========================================
+// Static Web App Parameters
+// ========================================
+
+// Standard tier for staging
+param staticWebAppSku = 'Standard'
+
+// GitHub integration for staging CI/CD
+param repositoryUrl = 'https://github.com/yourusername/fleet-assistant-multi-agent-app'
+param repositoryBranch = 'staging' // Use staging branch
+// param repositoryToken = '' // Pass as secure parameter during deployment
+
+// ========================================
+// Monitoring Parameters
+// ========================================
+
+// Enable daily cap with higher limit than dev
+param enableDailyCap = true
+param dailyCapGb = 5
+param logRetentionDays = 30
+
+// ========================================
+// Debugging Parameters
+// ========================================
+
+// Enable snapshot debugger for staging testing
+param enableSnapshotDebugger = true
+
+// ========================================
+// DEPLOYMENT INSTRUCTIONS
+// ========================================
+
+/*
+
+To deploy to staging:
+
+1. Copy this file to parameters.staging.bicepparam
+2. Update all placeholder values
+3. Deploy using Azure CLI:
+
+   # Create resource group
+   az group create \
+     --name fleet-assistant-staging-rg \
+     --location eastus
+
+   # Deploy
+   az deployment group create \
+     --resource-group fleet-assistant-staging-rg \
+     --template-file main.bicep \
+     --parameters parameters.staging.bicepparam \
+     --parameters repositoryToken=<your-github-token>
+
+4. Test thoroughly before promoting to production
+5. Validate:
+   - Application functionality
+   - Performance under load
+   - Security configurations
+   - Monitoring and alerting
+   - Disaster recovery procedures
+
+*/

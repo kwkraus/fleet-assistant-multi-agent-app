@@ -1,0 +1,146 @@
+// ========================================
+// Production Environment Parameters (EXAMPLE)
+// ========================================
+// This is a template for production deployment parameters
+// Copy this file to parameters.prod.bicepparam and customize for your environment
+
+using './main.bicep'
+
+// ========================================
+// Core Parameters
+// ========================================
+
+param environmentName = 'prod'
+param baseName = 'fleet' // Update with your production base name
+param location = 'eastus' // Choose primary region for production
+
+param tags = {
+  Environment: 'prod'
+  Application: 'FleetAssistant'
+  ManagedBy: 'Bicep'
+  Pattern: 'ReliableWebApp'
+  CostCenter: 'Operations' // Update with actual cost center
+  Owner: 'PlatformTeam' // Update with actual owner
+  DataClassification: 'Confidential'
+  Compliance: 'GDPR,HIPAA' // Add relevant compliance frameworks
+}
+
+// ========================================
+// Networking Parameters
+// ========================================
+
+param hubVNetAddressPrefix = '10.0.0.0/16'
+param spokeVNetAddressPrefix = '10.1.0.0/16'
+
+// ========================================
+// Security Parameters
+// ========================================
+
+// WAF ENABLED for production
+param enableWaf = true
+
+// ========================================
+// App Service Parameters
+// ========================================
+
+// Premium v3 tier for production
+param appServicePlanSku = 'P1v3'
+param appServiceInstanceCount = 2
+param enableAutoscaling = true
+param minInstanceCount = 2
+param maxInstanceCount = 10
+
+// ========================================
+// AI Foundry Parameters
+// ========================================
+
+// Standard tier for production
+param aiServicesSku = 'S0'
+
+// Agent ID - REQUIRED: Update this with your production agent ID
+param foundryAgentId = 'YOUR_PRODUCTION_AGENT_ID'
+
+// ========================================
+// Static Web App Parameters
+// ========================================
+
+// Standard tier for production
+param staticWebAppSku = 'Standard'
+
+// GitHub integration for production CI/CD
+param repositoryUrl = 'https://github.com/yourusername/fleet-assistant-multi-agent-app'
+param repositoryBranch = 'main'
+// param repositoryToken = '' // Pass as secure parameter: az deployment group create --parameters repositoryToken=<token>
+
+// ========================================
+// Monitoring Parameters
+// ========================================
+
+// No daily cap in production
+param enableDailyCap = false
+param dailyCapGb = 100 // High limit as safety net
+param logRetentionDays = 90 // Longer retention for compliance
+
+// ========================================
+// Debugging Parameters
+// ========================================
+
+// Snapshot debugger typically disabled in production
+// Enable only when troubleshooting critical production issues
+param enableSnapshotDebugger = false
+
+// ========================================
+// DEPLOYMENT INSTRUCTIONS
+// ========================================
+
+/*
+
+To deploy to production:
+
+1. Copy this file to parameters.prod.bicepparam
+2. Update all placeholder values (YOUR_PRODUCTION_AGENT_ID, repository URLs, etc.)
+3. Review and adjust SKUs, instance counts, and scaling parameters
+4. Ensure tags reflect your organization's standards
+5. Deploy using Azure CLI:
+
+   # Create resource group (if not exists)
+   az group create \
+     --name fleet-assistant-prod-rg \
+     --location eastus
+
+   # Validate deployment
+   az deployment group validate \
+     --resource-group fleet-assistant-prod-rg \
+     --template-file main.bicep \
+     --parameters parameters.prod.bicepparam
+
+   # Deploy with what-if preview
+   az deployment group what-if \
+     --resource-group fleet-assistant-prod-rg \
+     --template-file main.bicep \
+     --parameters parameters.prod.bicepparam
+
+   # Execute deployment
+   az deployment group create \
+     --resource-group fleet-assistant-prod-rg \
+     --template-file main.bicep \
+     --parameters parameters.prod.bicepparam \
+     --parameters repositoryToken=<your-github-token>
+
+6. After deployment:
+   - Verify all health checks pass
+   - Test application functionality
+   - Configure custom domains in Front Door
+   - Set up monitoring alerts
+   - Review security recommendations
+
+IMPORTANT SECURITY NOTES:
+- Never commit secrets or tokens to source control
+- Use Azure Key Vault for sensitive configuration in production
+- Review and harden NSG rules for your specific requirements
+- Configure custom domains and SSL certificates
+- Enable and configure monitoring alerts
+- Implement backup and disaster recovery procedures
+- Document runbooks for incident response
+
+*/

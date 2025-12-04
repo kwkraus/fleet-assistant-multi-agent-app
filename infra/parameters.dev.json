@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "dev"
+    },
+    "baseName": {
+      "value": "fleet"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "tags": {
+      "value": {
+        "Environment": "dev",
+        "Application": "FleetAssistant",
+        "ManagedBy": "Bicep",
+        "Pattern": "ReliableWebApp",
+        "CostCenter": "Engineering",
+        "Owner": "DevTeam"
+      }
+    },
+    "hubVNetAddressPrefix": {
+      "value": "10.0.0.0/16"
+    },
+    "spokeVNetAddressPrefix": {
+      "value": "10.1.0.0/16"
+    },
+    "enableWaf": {
+      "value": false
+    },
+    "appServicePlanSku": {
+      "value": "B1"
+    },
+    "appServiceInstanceCount": {
+      "value": 1
+    },
+    "enableAutoscaling": {
+      "value": false
+    },
+    "minInstanceCount": {
+      "value": 1
+    },
+    "maxInstanceCount": {
+      "value": 2
+    },
+    "aiServicesSku": {
+      "value": "S0"
+    },
+    "foundryAgentId": {
+      "value": ""
+    },
+    "staticWebAppSku": {
+      "value": "Free"
+    },
+    "repositoryUrl": {
+      "value": ""
+    },
+    "repositoryBranch": {
+      "value": "main"
+    },
+    "enableDailyCap": {
+      "value": true
+    },
+    "dailyCapGb": {
+      "value": 1
+    },
+    "logRetentionDays": {
+      "value": 7
+    },
+    "enableSnapshotDebugger": {
+      "value": false
+    }
+  }
+}
