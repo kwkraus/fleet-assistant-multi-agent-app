@@ -85,5 +85,18 @@ node_modules/
 .terraform/
 .terraform.lock.hcl
 
-# Bicep
+# Bicep - deployment artifacts and generated files
 *.bicep.json
+main.json
+parameters.*.json
+deployment-outputs.json
+
+# Bicep - exclude actual parameter files (should be managed)
+!parameters.dev.bicepparam
+!parameters.staging.bicepparam
+!parameters.prod.bicepparam
+
+# Bicep - secrets
+parameters.prod.bicepparam
+parameters.staging.bicepparam
+*secrets.bicepparam
