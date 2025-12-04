@@ -61,6 +61,7 @@ Before setting up the application, ensure you have the following tools installed
 - **SQL Server** (optional - application can use in-memory database for development)
 - **Azure CLI** (for Azure deployment)
   - Download from [docs.microsoft.com/cli/azure/install-azure-cli](https://docs.microsoft.com/cli/azure/install-azure-cli)
+  - Required for infrastructure deployment
 - **Azurite** (for local Azure Storage emulation)
   - Install: `npm install -g azurite`
 
@@ -72,6 +73,94 @@ Before setting up the application, ensure you have the following tools installed
 - **Azure Storage Account** (for blob storage)
 - **Azure SQL Database** (optional - can use in-memory DB for dev)
 - **Application Insights** (optional - for monitoring)
+
+## 🚢 Azure Deployment (Production)
+
+The Fleet Assistant includes comprehensive Bicep Infrastructure-as-Code templates following the **Microsoft Reliable Web App (RWA) pattern**. This provides enterprise-grade security, networking, and operational excellence.
+
+### Quick Start - Azure Deployment
+
+```bash
+# 1. Login to Azure
+az login
+
+# 2. Create resource group
+az group create \
+  --name fleet-assistant-prod-rg \
+  --location eastus
+
+# 3. Deploy infrastructure
+az deployment group create \
+  --resource-group fleet-assistant-prod-rg \
+  --template-file infra/main.bicep \
+  --parameters infra/parameters.dev.bicepparam
+
+# 4. Deployment takes 15-25 minutes
+# Outputs will include URLs for App Service, Static Web App, and Front Door
+```
+
+### Infrastructure Features
+
+✅ **Enterprise Networking**
+- Hub-spoke VNet topology with centralized security
+- Private endpoints for all PaaS services (no public exposure)
+- Azure Firewall for network-level traffic control
+- Network Security Groups (NSGs) for subnet isolation
+
+✅ **Global Security & Performance**
+- Azure Front Door Premium with global load balancing
+- Web Application Firewall (WAF) with OWASP rules
+- DDoS protection and geo-filtering
+- Managed identities for secure service authentication
+
+✅ **AI Integration**
+- Azure AI Foundry Hub and Project provisioning
+- AI Services (Cognitive Services) with private connectivity
+- Secure RBAC configuration for agent access
+- Automatic endpoint configuration for backend
+
+✅ **Operational Excellence**
+- Application Insights for APM and custom telemetry
+- Log Analytics for centralized logging
+- Auto-configured alerts for errors, performance, availability
+- Health checks and availability tests
+
+✅ **Cost Optimization**
+- Environment-specific SKU sizing (dev/staging/prod)
+- Autoscaling rules based on CPU, memory, and queue depth
+- Daily caps on Log Analytics for dev environments
+
+### Detailed Deployment Documentation
+
+For comprehensive deployment instructions, see:
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Step-by-step deployment instructions
+- **[Security Guide](./docs/SECURITY.md)** - Security architecture and hardening
+- **[Monitoring Guide](./docs/MONITORING.md)** - Observability and alerting setup
+
+### Infrastructure Components
+
+| Component | Purpose | SKU (Dev/Prod) |
+|-----------|---------|----------------|
+| Azure Front Door | Global CDN + WAF | Premium |
+| App Service | Backend API | B1 / P1v3 |
+| Static Web App | Next.js Frontend | Free / Standard |
+| AI Foundry | Multi-agent system | S0 |
+| Azure Firewall | Network security | Standard |
+| Application Insights | Monitoring | Pay-per-use |
+
+### Post-Deployment Steps
+
+After infrastructure deployment:
+
+1. **Create AI Agent** in Azure AI Foundry portal
+2. **Update deployment** with agent ID
+3. **Deploy application code** to App Service and Static Web App
+4. **Configure custom domain** in Front Door (production)
+5. **Review monitoring** dashboards and alerts
+
+See the [Deployment Guide](./docs/DEPLOYMENT.md) for detailed instructions.
+
+## 📋 Prerequisites
 
 ## 🚀 Local Setup Instructions
 
